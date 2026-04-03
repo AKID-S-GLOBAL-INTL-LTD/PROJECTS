@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Password Cracking Toolkit (Ethical Use)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-5">
+    <div class="alert alert-warning">
+        <strong>⚠️ Ethical Use Only</strong> – This tool is for testing your own passwords or authorized CTF challenges. Do not use on systems you don't own.
+    </div>
+    <h2>🔓 Password Cracking Toolkit</h2>
+    <p>Supports MD5, SHA1, SHA256, SHA512, NTLM, bcrypt.</p>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="mb-3">
+                <label>Target Hash</label>
+                <input type="text" id="hash" class="form-control" placeholder="e.g., 5f4dcc3b5aa765d61d8327deb882cf99 (MD5 for 'password')">
+                <small id="hashType" class="text-muted"></small>
+            </div>
+            
+            <div class="mb-3">
+                <label>Attack Type</label>
+                <select id="attackType" class="form-select">
+                    <option value="dictionary">Dictionary Attack</option>
+                    <option value="bruteforce">Brute Force (limited)</option>
+                </select>
+            </div>
+            
+            <div id="dictOptions">
+                <div class="mb-3">
+                    <label>Wordlist (optional, max 10k lines processed)</label>
+                    <input type="file" id="wordlistFile" class="form-control">
+                    <small>Leave empty to use built-in small list (10 common passwords).</small>
+                </div>
+                <div class="mb-3">
+                    <label>Max Words to Try</label>
+                    <input type="number" id="maxWords" class="form-control" value="10000">
+                </div>
+            </div>
+            
+            <div id="bfOptions" style="display:none;">
+                <div class="mb-3">
+                    <label>Max Length (1-5, higher is slow)</label>
+                    <input type="number" id="maxLength" class="form-control" value="4" min="1" max="5">
+                </div>
+                <div class="mb-3">
+                    <label>Character Set</label>
+                    <input type="text" id="charset" class="form-control" value="abcdefghijklmnopqrstuvwxyz0123456789">
+                </div>
+            </div>
+            
+            <button id="crackBtn" class="btn btn-danger">Start Cracking</button>
+        </div>
+    </div>
+    
+    <div id="results" class="mt-4" style="display:none;">
+        <h4>Results</h4>
+        <pre id="resultText" class="bg-dark text-white p-3 rounded"></pre>
+    </div>
+</div>
+
+<script>
+    const hashInput = document.getElementById('hash');
+    const hashTypeSpan = document.getElementById('hashType');
+    const attackType = document.getElementById('attackType');
+    const dictOpt = document.getElementById('dictOptions');
+    const bfOpt = document.getElementById('bfOptions');
+    const crackBtn = document.getElementById('crackBtn');
+    const resultsDiv = document.getElementById('results');
+    const resultText = document.getElementById('resultText');
+    
+    // Auto-detect hash type
+    let debounce;
+    hashInput.addEventListener('input', () => {
+        clearTimeout(debounce);
+        debounce = setTimeout(() => {
+            const hash = hashInput.value.trim();
+            if (hash.length < 5) {
+                hashTypeSpan.innerText = '';
+                return;
+            }
+            fetch('/identify', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({hash: hash})
+            })
+            .then(r => r.json())
+            .then(data => {
+                hashTypeSpan.innerText = `Detected: ${data.type.toUpperCase()}`;
+            });
+        }, 400);
+    });
+    
+    attackType.addEventListener('change', () => {
+        if (attackType.value === 'bruteforce') {
+            dictOpt.style.display = 'none';
+            bfOpt.style.display = 'block';
+        } else {
+            dictOpt.style.display = 'block';
+            bfOpt.style.display = 'none';
+        }
+    });
+    
+    crackBtn.addEventListener('click', async () => {
+        const hash = hashInput.value.trim();
+        if (!hash) {
+            alert('Enter a hash');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('hash', hash);
+        formData.append('attack_type', attackType.value);
+        
+        if (attackType.value === 'dictionary') {
+            const wordlistFile = document.getElementById('wordlistFile').files[0];
+            if (wordlistFile) formData.append('wordlist', wordlistFile);
+            formData.append('max_words', document.getElementById('maxWords').value);
+        } else {
+            formData.append('max_length', document.getElementById('maxLength').value);
+            formData.append('charset', document.getElementById('charset').value);
+        }
+        
+        crackBtn.disabled = true;
+        crackBtn.innerText = 'Cracking...';
+        resultsDiv.style.display = 'block';
+        resultText.innerText = 'Working... (this may take a moment)';
+        
+        try {
+            const response = await fetch('/crack', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            if (data.error) {
+                resultText.innerText = `Error: ${data.error}`;
+            } else {
+                let output = `Hash Type: ${data.hash_type}\n`;
+                output += `Attempts: ${data.attempts}\n`;
+                output += `Time: ${data.time_seconds} seconds\n`;
+                output += `Speed: ${data.attempts_per_sec} attempts/sec\n`;
+                if (data.found) {
+                    output += `✅ PASSWORD FOUND: ${data.password}\n`;
+                } else {
+                    output += `❌ Password not found within limits.\n`;
+                }
+                resultText.innerText = output;
+            }
+        } catch (err) {
+            resultText.innerText = `Error: ${err.message}`;
+        }
+        crackBtn.disabled = false;
+        crackBtn.innerText = 'Start Cracking';
+    });
+</script>
+</body>
+</html>
