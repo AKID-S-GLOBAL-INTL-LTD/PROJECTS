@@ -1,20 +1,20 @@
-from flask import Flask, render_template, request, jsonify
-from cracker import identify_hash, crack_hash, brute_force
+from flask import Flask, render_template, request, jsonify, session
+from cracker import identify_hash, crack_hash
 import os
+import threading
+import time
+import uuid
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max wordlist
+app.secret_key = 'your-secret-key-change-in-production'
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB max upload
 
-# Default wordlist path (you can replace with a larger one)
-DEFAULT_WORDLIST = 'wordlists/common.txt'
-
-# Ensure wordlist directory exists
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs('wordlists', exist_ok=True)
-# Create a small default wordlist if not exists
-if not os.path.exists(DEFAULT_WORDLIST):
-    with open(DEFAULT_WORDLIST, 'w') as f:
-        common = ['password', '123456', 'admin', 'letmein', 'welcome', 'monkey', 'dragon', 'baseball', 'master', 'sunshine']
-        f.write('\n'.join(common))
+
+# Store progress globally (in production use Redis/database)
+progress_store = {}
 
 @app.route('/')
 def index():
@@ -30,47 +30,94 @@ def identify():
 @app.route('/crack', methods=['POST'])
 def crack():
     target_hash = request.form.get('hash', '').strip()
-    attack_type = request.form.get('attack_type', 'dictionary')
-    hash_type = identify_hash(target_hash)
-    
+    if not target_hash:
+        return jsonify({'error': 'No hash provided'}), 400
+
+    # Get user-selected hash type (or auto)
+    selected_type = request.form.get('hash_type', 'auto')
+    if selected_type == 'auto':
+        hash_type = identify_hash(target_hash)
+    else:
+        hash_type = selected_type
+
     if hash_type == 'unknown':
-        return jsonify({'error': 'Unknown hash format'}), 400
-    
-    # Handle custom wordlist upload
-    wordlist_path = DEFAULT_WORDLIST
+        return jsonify({'error': 'Unknown hash format. Please select a type manually.'}), 400
+
+    # Handle wordlist upload
+    wordlist_path = None
     if 'wordlist' in request.files:
         file = request.files['wordlist']
         if file and file.filename:
-            temp_path = 'wordlists/uploaded.txt'
-            file.save(temp_path)
-            wordlist_path = temp_path
-    
-    max_words = int(request.form.get('max_words', 10000))
-    
-    if attack_type == 'dictionary':
-        password, attempts, elapsed = crack_hash(target_hash, wordlist_path, hash_type, max_words)
-    elif attack_type == 'bruteforce':
-        max_len = int(request.form.get('max_length', 4))
-        charset = request.form.get('charset', 'abcdefghijklmnopqrstuvwxyz0123456789')
-        password, attempts, elapsed = brute_force(target_hash, hash_type, max_len, charset)
-    else:
-        return jsonify({'error': 'Invalid attack type'}), 400
-    
-    # Clean up uploaded wordlist
-    if 'wordlist' in request.files and wordlist_path != DEFAULT_WORDLIST:
-        try:
-            os.remove(wordlist_path)
-        except:
-            pass
-    
+            temp_filename = f"{uuid.uuid4().hex}_{file.filename}"
+            wordlist_path = os.path.join(UPLOAD_FOLDER, temp_filename)
+            file.save(wordlist_path)
+
+    if not wordlist_path:
+        # Use default common.txt
+        default_wordlist = os.path.join('wordlists', 'common.txt')
+        if not os.path.exists(default_wordlist):
+            # Create a minimal default wordlist if missing
+            with open(default_wordlist, 'w') as f:
+                f.write('\n'.join(['password', '123456', 'admin', 'letmein', 'welcome']))
+        wordlist_path = default_wordlist
+
+    # Start cracking in background thread
+    job_id = str(int(time.time())) + '_' + uuid.uuid4().hex[:6]
+    progress_store[job_id] = {
+        'status': 'running',
+        'attempts': 0,
+        'found': False,
+        'hash_type': hash_type
+    }
+
+    def crack_task():
+        def update_progress(attempts, word):
+            progress_store[job_id]['attempts'] = attempts
+
+        password, attempts, elapsed = crack_hash(
+            target_hash, wordlist_path, hash_type, update_progress
+        )
+        progress_store[job_id]['status'] = 'done'
+        progress_store[job_id]['password'] = password
+        progress_store[job_id]['attempts'] = attempts
+        progress_store[job_id]['elapsed'] = elapsed
+        # Clean up uploaded wordlist if it was a temp file
+        if wordlist_path and wordlist_path.startswith(UPLOAD_FOLDER):
+            try:
+                os.remove(wordlist_path)
+            except:
+                pass
+
+    thread = threading.Thread(target=crack_task)
+    thread.daemon = True
+    thread.start()
+
     return jsonify({
-        'found': password is not None,
-        'password': password,
-        'attempts': attempts,
-        'time_seconds': round(elapsed, 3),
+        'job_id': job_id,
         'hash_type': hash_type,
-        'attempts_per_sec': round(attempts / elapsed, 2) if elapsed > 0 else 0
+        'message': 'Cracking started'
     })
+
+@app.route('/progress/<job_id>')
+def progress(job_id):
+    if job_id not in progress_store:
+        return jsonify({'error': 'Invalid job'}), 404
+    data = progress_store[job_id]
+    if data['status'] == 'done':
+        return jsonify({
+            'status': 'done',
+            'found': data['password'] is not None,
+            'password': data['password'],
+            'attempts': data['attempts'],
+            'time_seconds': round(data['elapsed'], 3),
+            'hash_type': data.get('hash_type', 'unknown'),
+            'attempts_per_sec': round(data['attempts'] / data['elapsed'], 2) if data['elapsed'] > 0 else 0
+        })
+    else:
+        return jsonify({
+            'status': 'running',
+            'attempts': data['attempts']
+        })
 
 if __name__ == '__main__':
     app.run(debug=True, port=5002)
