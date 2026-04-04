@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Subdomain & Asset Discovery Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-4">
+    <h2>🌐 Subdomain & Asset Discovery</h2>
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="discoveryForm">
+                <div class="mb-3">
+                    <label>Domain (e.g., example.com)</label>
+                    <input type="text" id="domain" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label>Max Subdomains to Try (default 10,000)</label>
+                    <input type="number" id="maxSubdomains" class="form-control" value="10000" min="1" max="500000">
+                    <small>For large wordlists, set a reasonable limit to avoid long waits.</small>
+                </div>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" id="httpCheck" class="form-check-input" checked>
+                    <label class="form-check-label">Check HTTP/HTTPS (slower, more informative)</label>
+                </div>
+                <div class="mb-3">
+                    <label>Custom Subdomain Wordlist (optional)</label>
+                    <input type="file" id="wordlistFile" class="form-control">
+                </div>
+                <button type="submit" class="btn btn-primary">Start Discovery</button>
+            </form>
+        </div>
+    </div>
+    <div id="progressArea" style="display:none;">
+        <div class="progress mb-3">
+            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+        </div>
+        <p id="progressText"></p>
+    </div>
+    <div id="resultsArea" style="display:none;">
+        <h4>Discovered Subdomains</h4>
+        <div id="resultsTable"></div>
+    </div>
+</div>
+<script>
+    const form = document.getElementById('discoveryForm');
+    const progressArea = document.getElementById('progressArea');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const resultsArea = document.getElementById('resultsArea');
+    const resultsTable = document.getElementById('resultsTable');
+    let jobId = null;
+    let pollInterval = null;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const domain = document.getElementById('domain').value.trim();
+        if (!domain) return;
+        const httpCheck = document.getElementById('httpCheck').checked;
+        const maxSubdomains = document.getElementById('maxSubdomains').value;
+        const formData = new FormData();
+        formData.append('domain', domain);
+        formData.append('http_check', httpCheck);
+        formData.append('max_subdomains', maxSubdomains);
+        const wordlistFile = document.getElementById('wordlistFile').files[0];
+        if (wordlistFile) formData.append('wordlist', wordlistFile);
+        
+        resultsArea.style.display = 'none';
+        resultsTable.innerHTML = '';
+        progressArea.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.innerText = 'Starting...';
+        
+        const response = await fetch('/discover', { method: 'POST', body: formData });
+        const data = await response.json();
+        if (data.error) {
+            alert(data.error);
+            progressArea.style.display = 'none';
+            return;
+        }
+        jobId = data.job_id;
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(pollStatus, 1500);
+    });
+
+    async function pollStatus() {
+        if (!jobId) return;
+        const statusRes = await fetch(`/status/${jobId}`);
+        const status = await statusRes.json();
+        if (status.status === 'running') {
+            const total = status.progress.total;
+            const current = status.progress.current;
+            const percent = total ? (current / total) * 100 : 0;
+            progressBar.style.width = `${percent}%`;
+            progressText.innerText = `Probed ${current.toLocaleString()} / ${total.toLocaleString()} subdomains... Found ${status.results_count} live.`;
+        } else if (status.status === 'done') {
+            clearInterval(pollInterval);
+            progressBar.style.width = '100%';
+            progressText.innerText = 'Discovery complete! Loading results...';
+            const resultsRes = await fetch(`/results/${jobId}`);
+            const resultsData = await resultsRes.json();
+            displayResults(resultsData.results);
+            progressArea.style.display = 'none';
+            resultsArea.style.display = 'block';
+        } else if (status.status === 'error') {
+            clearInterval(pollInterval);
+            progressArea.style.display = 'none';
+            alert(`Error: ${status.error}`);
+        }
+    }
+
+    function displayResults(results) {
+        if (!results.length) {
+            resultsTable.innerHTML = '<div class="alert alert-info">No subdomains found.</div>';
+            return;
+        }
+        let html = '<table class="table table-sm table-bordered"><thead><tr><th>Subdomain</th><th>IP Addresses</th><th>CNAME</th><th>HTTP Details</th></tr></thead><tbody>';
+        results.forEach(r => {
+            const ips = r.ips.join(', ') || '-';
+            const cname = r.cname || '-';
+            let httpDetails = '';
+            if (r.http && r.http.length) {
+                httpDetails = r.http.map(h => `${h.url} → ${h.status}${h.title ? ` (${h.title})` : ''}`).join('<br>');
+            } else {
+                httpDetails = 'No web service';
+            }
+            html += `<tr><td>${r.full_domain}</td><td>${ips}</td><td>${cname}</td><td>${httpDetails}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        resultsTable.innerHTML = html;
+    }
+</script>
+</body>
+</html>
