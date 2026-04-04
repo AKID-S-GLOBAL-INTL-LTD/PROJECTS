@@ -1,152 +1,587 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Password Cracking Toolkit</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HashBreak — Password Recovery Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #f7f5f0;
+      --surface:   #ffffff;
+      --border:    #e5e1d8;
+      --border-md: #ccc7bb;
+      --accent:    #1a6b4a;
+      --accent-lt: #e8f3ed;
+      --accent-md: #b2d4c2;
+      --red:       #c0392b;
+      --red-lt:    #fdf0ee;
+      --text:      #1c1a17;
+      --muted:     #7a7568;
+      --hint:      #b0aa9e;
+      --sans:      'DM Sans', sans-serif;
+      --serif:     'Instrument Serif', serif;
+      --mono:      'DM Mono', monospace;
+      --radius:    10px;
+      --radius-lg: 16px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      font-family: var(--sans);
+      font-size: 15px;
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 64px 24px 80px;
+    }
+
+    /* Header */
+    .header { margin-bottom: 48px; }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: var(--text);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .logo-name {
+      font-family: var(--serif);
+      font-size: 20px;
+      color: var(--text);
+    }
+
+    .header-title {
+      font-family: var(--serif);
+      font-size: 38px;
+      font-weight: 400;
+      line-height: 1.15;
+      letter-spacing: -0.5px;
+      margin-bottom: 12px;
+    }
+
+    .header-title em { font-style: italic; color: var(--accent); }
+
+    .header-desc {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 14px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--hint);
+      margin-bottom: 18px;
+    }
+
+    .field { margin-bottom: 20px; }
+    .field:last-child { margin-bottom: 0; }
+
+    .field-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .detect-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--accent-lt);
+      color: var(--accent);
+      padding: 3px 9px;
+      border-radius: 20px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .detect-pill.on { opacity: 1; }
+    .detect-pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+    input[type="text"], select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 14px;
+      padding: 11px 14px;
+      border-radius: var(--radius);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+      appearance: none;
+    }
+
+    input[type="text"]:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(26,107,74,0.1);
+      background: #fff;
+    }
+
+    input[type="text"]::placeholder { color: var(--hint); font-family: var(--mono); }
+
+    select {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23b0aa9e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 38px;
+    }
+
+    select option { font-family: var(--sans); background: #fff; }
+
+    /* File zone */
+    .file-zone {
+      border: 1.5px dashed var(--border-md);
+      border-radius: var(--radius);
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+      background: var(--bg);
+    }
+
+    .file-zone:hover { border-color: var(--accent); background: var(--accent-lt); }
+
+    .file-zone input[type="file"] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer;
+      width: 100%; height: 100%;
+    }
+
+    .fz-icon {
+      width: 36px; height: 36px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .fz-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+    .fz-sub   { font-size: 12px; color: var(--hint); }
+    .fz-sub.picked { color: var(--accent); }
+
+    hr.sep { border: none; border-top: 1px solid var(--border); margin: 22px 0; }
+
+    /* Notice */
+    .notice {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      background: #fffbf0;
+      border: 1px solid #f0d990;
+      border-radius: var(--radius);
+      font-size: 12.5px;
+      color: #7a6520;
+      line-height: 1.55;
+    }
+
+    /* Button */
+    .btn {
+      width: 100%;
+      background: var(--text);
+      color: #fff;
+      border: none;
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 500;
+      padding: 13px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      margin-top: 20px;
+    }
+
+    .btn:hover:not(:disabled) { background: #2e2b25; }
+    .btn:active:not(:disabled) { transform: scale(0.99); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-spin {
+      width: 15px; height: 15px;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Results */
+    #resultsCard { display: none; }
+
+    .ptrack { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 22px; }
+
+    #pbar { height: 100%; width: 0%; background: var(--accent); transition: width 0.5s ease; border-radius: 2px; }
+    #pbar.fail { background: var(--red); }
+
+    .log {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 2;
+      min-height: 96px;
+      color: var(--muted);
+      white-space: pre;
+    }
+
+    .lk { color: var(--hint); }
+    .lv { color: var(--text); }
+    .la { color: var(--accent); font-weight: 500; }
+    .lr { color: var(--red); }
+
+    .pulse {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-left: 4px;
+      vertical-align: middle;
+      animation: pa 1s ease-in-out infinite;
+    }
+
+    @keyframes pa { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .stile {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      text-align: center;
+    }
+
+    .sn { font-family: var(--serif); font-size: 22px; color: var(--text); line-height: 1; margin-bottom: 4px; }
+    .sk { font-size: 11px; color: var(--hint); letter-spacing: 0.8px; text-transform: uppercase; }
+
+    .rbanner {
+      display: none;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 20px;
+      border-radius: var(--radius);
+      margin-top: 14px;
+    }
+
+    .rbanner.found    { background: var(--accent-lt); border: 1px solid var(--accent-md); }
+    .rbanner.notfound { background: var(--red-lt); border: 1px solid #f3c4be; }
+
+    .rico {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .rbanner.found    .rico { background: var(--accent-md); }
+    .rbanner.notfound .rico { background: #f3c4be; }
+
+    .rlabel { font-size: 11px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+
+    .rpw { font-family: var(--serif); font-size: 26px; letter-spacing: -0.3px; color: var(--text); }
+    .rbanner.notfound .rpw { font-family: var(--sans); font-size: 14px; color: var(--red); }
+
+    .footer { text-align: center; font-size: 12px; color: var(--hint); margin-top: 40px; }
+
+    @media (max-width: 460px) {
+      .page { padding: 40px 16px 60px; }
+      .header-title { font-size: 30px; }
+      .stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
 </head>
 <body>
-<div class="container mt-5">
-    <div class="alert alert-warning">⚠️ Ethical Use Only</div>
-    <h2>🔓 Password Cracking Toolkit</h2>
-    <div class="card">
-        <div class="card-body">
-            <div class="mb-3">
-                <label>Target Hash</label>
-                <input type="text" id="hash" class="form-control" placeholder="e.g., 5f4dcc3b5aa765d61d8327deb882cf99">
-                <small id="hashType" class="text-muted"></small>
-            </div>
-            <div class="mb-3">
-                <label>Hash Type (auto-detected, but you can override)</label>
-                <select id="hashTypeSelect" class="form-select">
-                    <option value="auto">Auto-detect</option>
-                    <option value="MD5">MD5</option>
-                    <option value="SHA1">SHA1</option>
-                    <option value="SHA256">SHA256</option>
-                    <option value="SHA512">SHA512</option>
-                    <option value="NTLM">NTLM</option>
-                    <option value="bcrypt">bcrypt</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label>Wordlist (optional, max 2GB)</label>
-                <input type="file" id="wordlistFile" class="form-control">
-                <small>Leave empty to use built-in small list.</small>
-            </div>
-            <button id="crackBtn" class="btn btn-danger">Start Cracking</button>
-        </div>
+<div class="page">
+
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="1" width="6" height="9" rx="3" stroke="white" stroke-width="1.5"/>
+          <rect x="2" y="8" width="14" height="9" rx="2" stroke="white" stroke-width="1.5"/>
+          <circle cx="9" cy="12.5" r="1.5" fill="white"/>
+        </svg>
+      </div>
+      <span class="logo-name">HashBreak</span>
     </div>
-    <div id="results" class="mt-4" style="display:none;">
-        <h4>Results</h4>
-        <div class="progress mb-3">
-            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
-        </div>
-        <pre id="resultText" class="bg-dark text-white p-3 rounded"></pre>
+    <h1 class="header-title">Recover a<br><em>forgotten password</em></h1>
+    <p class="header-desc">Dictionary attack against common hash formats. Upload your own wordlist or use the built-in list.</p>
+  </header>
+
+  <div class="card">
+    <div class="section-label">Target</div>
+
+    <div class="field">
+      <div class="field-label">
+        Hash string
+        <span class="detect-pill" id="dpill">MD5</span>
+      </div>
+      <input type="text" id="hash" placeholder="5f4dcc3b5aa765d61d8327deb882cf99" autocomplete="off" spellcheck="false"/>
     </div>
+
+    <div class="field">
+      <div class="field-label">Algorithm</div>
+      <select id="hashSel">
+        <option value="auto">Auto-detect</option>
+        <option value="MD5">MD5</option>
+        <option value="SHA1">SHA-1</option>
+        <option value="SHA256">SHA-256</option>
+        <option value="SHA512">SHA-512</option>
+        <option value="NTLM">NTLM</option>
+        <option value="bcrypt">bcrypt</option>
+      </select>
+    </div>
+
+    <hr class="sep"/>
+    <div class="section-label">Wordlist</div>
+
+    <div class="field">
+      <div class="file-zone">
+        <input type="file" id="wlFile" accept=".txt,.lst,.dic,.csv">
+        <div class="fz-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 11V3M5 6l3-3 3 3M3 13h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="fz-title">Upload wordlist</div>
+          <div class="fz-sub" id="fzsub">Click to browse &middot; up to 2 GB</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notice">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="7" cy="7" r="6" stroke="#c9a418" stroke-width="1.3"/>
+        <line x1="7" y1="6" x2="7" y2="10" stroke="#c9a418" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="7" cy="4" r="0.7" fill="#c9a418"/>
+      </svg>
+      For authorized testing and educational use only. Do not use on accounts you do not own.
+    </div>
+
+    <button class="btn" id="crackBtn">
+      <div class="btn-spin" id="bspin"></div>
+      <span id="blabel">Start cracking</span>
+    </button>
+  </div>
+
+  <div class="card" id="resultsCard">
+    <div class="section-label">Results</div>
+
+    <div class="ptrack"><div id="pbar"></div></div>
+
+    <div class="log" id="logEl"><span style="color:var(--hint)">Waiting to start…</span></div>
+
+    <div class="stats" id="statsEl" style="display:none">
+      <div class="stile"><div class="sn" id="sA">—</div><div class="sk">Attempts</div></div>
+      <div class="stile"><div class="sn" id="sT">—</div><div class="sk">Seconds</div></div>
+      <div class="stile"><div class="sn" id="sS">—</div><div class="sk">Hash / sec</div></div>
+    </div>
+
+    <div class="rbanner" id="rbanner">
+      <div class="rico"><svg id="rico-svg" width="18" height="18" viewBox="0 0 18 18" fill="none"></svg></div>
+      <div>
+        <div class="rlabel" id="rlabel"></div>
+        <div class="rpw" id="rpw"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Akid's Global Cyber Security Tools &middot; &copy; 2026</div>
 </div>
+
 <script>
-    const hashInput = document.getElementById('hash');
-    const autoTypeSpan = document.getElementById('hashType');
-    const hashTypeSelect = document.getElementById('hashTypeSelect');
-    const crackBtn = document.getElementById('crackBtn');
-    const resultsDiv = document.getElementById('results');
-    const resultText = document.getElementById('resultText');
-    const progressBar = document.getElementById('progressBar');
-    let jobId = null;
-    let pollInterval = null;
+  const hashEl   = document.getElementById('hash');
+  const dpill    = document.getElementById('dpill');
+  const hashSel  = document.getElementById('hashSel');
+  const crackBtn = document.getElementById('crackBtn');
+  const blabel   = document.getElementById('blabel');
+  const bspin    = document.getElementById('bspin');
+  const wlFile   = document.getElementById('wlFile');
+  const fzsub    = document.getElementById('fzsub');
+  const resCard  = document.getElementById('resultsCard');
+  const logEl    = document.getElementById('logEl');
+  const pbar     = document.getElementById('pbar');
+  const statsEl  = document.getElementById('statsEl');
+  const rbanner  = document.getElementById('rbanner');
 
-    // Auto-detect and show in UI, but user can override
-    let debounce;
-    hashInput.addEventListener('input', () => {
-        clearTimeout(debounce);
-        debounce = setTimeout(() => {
-            const hash = hashInput.value.trim();
-            if (hash.length < 5) {
-                autoTypeSpan.innerText = '';
-                return;
-            }
-            fetch('/identify', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({hash: hash})
-            })
-            .then(r => r.json())
-            .then(data => {
-                autoTypeSpan.innerText = `Auto-detected: ${data.type.toUpperCase()}`;
-                // Optionally set the dropdown to the detected type (but don't force)
-            });
-        }, 400);
-    });
+  let jobId = null, pollT = null;
 
-    crackBtn.addEventListener('click', async () => {
-        const hash = hashInput.value.trim();
-        if (!hash) {
-            alert('Enter a hash');
-            return;
-        }
-        const formData = new FormData();
-        formData.append('hash', hash);
-        formData.append('hash_type', hashTypeSelect.value);
-        const wordlistFile = document.getElementById('wordlistFile').files[0];
-        if (wordlistFile) formData.append('wordlist', wordlistFile);
-        
-        crackBtn.disabled = true;
-        crackBtn.innerText = 'Starting...';
-        resultsDiv.style.display = 'block';
-        resultText.innerText = 'Starting cracking job...';
-        progressBar.style.width = '0%';
-        
-        try {
-            const response = await fetch('/crack', { method: 'POST', body: formData });
-            const data = await response.json();
-            if (data.error) {
-                resultText.innerText = `Error: ${data.error}`;
-                crackBtn.disabled = false;
-                crackBtn.innerText = 'Start Cracking';
-                return;
-            }
-            jobId = data.job_id;
-            resultText.innerText = `Cracking in progress (${data.hash_type})...`;
-            if (pollInterval) clearInterval(pollInterval);
-            pollInterval = setInterval(pollProgress, 2000);
-        } catch (err) {
-            resultText.innerText = `Error: ${err.message}`;
-            crackBtn.disabled = false;
-            crackBtn.innerText = 'Start Cracking';
-        }
-    });
+  // Auto-detect
+  let dbt;
+  hashEl.addEventListener('input', () => {
+    clearTimeout(dbt);
+    const v = hashEl.value.trim();
+    if (v.length < 5) { dpill.className = 'detect-pill'; return; }
+    dbt = setTimeout(() => {
+      fetch('/identify', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({hash: v}) })
+        .then(r => r.json())
+        .then(d => {
+          if (d.type && d.type !== 'unknown') {
+            dpill.textContent = d.type;
+            dpill.className = 'detect-pill on';
+          } else {
+            dpill.className = 'detect-pill';
+          }
+        }).catch(() => {});
+    }, 380);
+  });
 
-    async function pollProgress() {
-        if (!jobId) return;
-        try {
-            const res = await fetch(`/progress/${jobId}`);
-            const data = await res.json();
-            if (data.status === 'running') {
-                resultText.innerText = `Cracking... Attempts: ${data.attempts.toLocaleString()}`;
-                progressBar.style.width = '50%';
-            } else if (data.status === 'done') {
-                clearInterval(pollInterval);
-                crackBtn.disabled = false;
-                crackBtn.innerText = 'Start Cracking';
-                let output = `Hash Type: ${data.hash_type}\n`;
-                output += `Attempts: ${data.attempts.toLocaleString()}\n`;
-                output += `Time: ${data.time_seconds} seconds\n`;
-                output += `Speed: ${data.attempts_per_sec.toLocaleString()} attempts/sec\n`;
-                if (data.found) {
-                    output += `✅ PASSWORD FOUND: ${data.password}\n`;
-                    progressBar.style.width = '100%';
-                    progressBar.className = 'progress-bar bg-success';
-                } else {
-                    output += `❌ Password not found in wordlist.\n`;
-                    progressBar.style.width = '100%';
-                    progressBar.className = 'progress-bar bg-danger';
-                }
-                resultText.innerText = output;
-                jobId = null;
-            }
-        } catch (err) {
-            console.error(err);
-        }
+  wlFile.addEventListener('change', () => {
+    if (wlFile.files[0]) { fzsub.textContent = wlFile.files[0].name; fzsub.className = 'fz-sub picked'; }
+    else { fzsub.textContent = 'Click to browse · up to 2 GB'; fzsub.className = 'fz-sub'; }
+  });
+
+  function setRunning(v) {
+    crackBtn.disabled = v;
+    bspin.style.display = v ? 'block' : 'none';
+    blabel.textContent = v ? 'Cracking…' : 'Start cracking';
+  }
+
+  function html(key, val, cls) {
+    return `<span class="lk">${key}</span><span class="${cls||'lv'}">${val}</span>`;
+  }
+
+  crackBtn.addEventListener('click', async () => {
+    const hash = hashEl.value.trim();
+    if (!hash) { hashEl.focus(); return; }
+
+    const fd = new FormData();
+    fd.append('hash', hash);
+    fd.append('hash_type', hashSel.value);
+    if (wlFile.files[0]) fd.append('wordlist', wlFile.files[0]);
+
+    setRunning(true);
+    resCard.style.display = 'block';
+    statsEl.style.display = 'none';
+    rbanner.style.display = 'none';
+    rbanner.className = 'rbanner';
+    pbar.style.width = '10%'; pbar.className = '';
+    logEl.innerHTML = html('status     ', 'initializing') + '<span class="pulse"></span>';
+
+    try {
+      const res  = await fetch('/crack', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.error) {
+        logEl.innerHTML = `<span class="lr">Error: ${data.error}</span>`;
+        pbar.style.width = '100%'; pbar.className = 'fail';
+        setRunning(false); return;
+      }
+      jobId = data.job_id;
+      logEl.innerHTML = html('algorithm  ', data.hash_type, 'la') + '\n' + html('status     ', 'running', 'la') + '<span class="pulse"></span>';
+      pbar.style.width = '25%';
+      if (pollT) clearInterval(pollT);
+      pollT = setInterval(doPoll, 1800);
+    } catch (e) {
+      logEl.innerHTML = `<span class="lr">Network error: ${e.message}</span>`;
+      setRunning(false);
     }
+  });
+
+  async function doPoll() {
+    if (!jobId) return;
+    try {
+      const res = await fetch(`/progress/${jobId}`);
+      const d   = await res.json();
+
+      if (d.status === 'running') {
+        logEl.innerHTML =
+          html('status     ', 'running', 'la') + '<span class="pulse"></span>\n' +
+          html('attempts   ', d.attempts.toLocaleString());
+        const w = parseInt(pbar.style.width) || 25;
+        if (w < 82) pbar.style.width = (w + 3) + '%';
+
+      } else if (d.status === 'done') {
+        clearInterval(pollT); setRunning(false); jobId = null;
+
+        statsEl.style.display = 'grid';
+        document.getElementById('sA').textContent = d.attempts.toLocaleString();
+        document.getElementById('sT').textContent = d.time_seconds + 's';
+        document.getElementById('sS').textContent = d.attempts_per_sec.toLocaleString();
+        pbar.style.width = '100%';
+
+        if (d.found) {
+          pbar.className = '';
+          logEl.innerHTML =
+            html('algorithm  ', d.hash_type, 'la') + '\n' +
+            html('attempts   ', d.attempts.toLocaleString()) + '\n' +
+            html('elapsed    ', d.time_seconds + 's') + '\n' +
+            `<span class="la">&#10003; match found</span>`;
+
+          rbanner.className = 'rbanner found'; rbanner.style.display = 'flex';
+          document.getElementById('rico-svg').innerHTML = `<path d="M4 9l3.5 3.5L14 5.5" stroke="#1a6b4a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`;
+          document.getElementById('rlabel').textContent = 'Password recovered';
+          document.getElementById('rpw').textContent = d.password;
+
+        } else {
+          pbar.className = 'fail';
+          logEl.innerHTML =
+            html('algorithm  ', d.hash_type, 'la') + '\n' +
+            html('attempts   ', d.attempts.toLocaleString()) + '\n' +
+            html('elapsed    ', d.time_seconds + 's') + '\n' +
+            `<span class="lr">&#10007; not found in wordlist</span>`;
+
+          rbanner.className = 'rbanner notfound'; rbanner.style.display = 'flex';
+          document.getElementById('rico-svg').innerHTML = `<path d="M5 5l8 8M13 5l-8 8" stroke="#c0392b" stroke-width="1.8" stroke-linecap="round"/>`;
+          document.getElementById('rlabel').textContent = 'Result';
+          document.getElementById('rpw').textContent = 'Password not found in wordlist';
+        }
+      }
+    } catch (e) { console.error(e); }
+  }
 </script>
 </body>
 </html>

@@ -1,38 +1,180 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Encrypt or Decrypt a File</h2>
-<div class="row">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">Encrypt</div>
+<style>
+    .page-header {
+        margin-bottom: 2.5rem;
+        text-align: center;
+    }
+
+    .page-title {
+        font-family: 'Rajdhani', sans-serif;
+        font-weight: 700;
+        font-size: 2rem;
+        color: #fff;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 0.4rem;
+    }
+
+    .page-title span { color: var(--accent); }
+
+    .page-subtitle {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        letter-spacing: 0.15em;
+    }
+
+    .divider {
+        width: 60px;
+        height: 2px;
+        background: linear-gradient(90deg, var(--accent), transparent);
+        margin: 0.8rem auto;
+    }
+
+    /* Algo badge */
+    .algo-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: rgba(0,0,0,0.25);
+        border-radius: 5px;
+        border: 1px solid rgba(0,212,255,0.1);
+    }
+
+    .algo-info .badge-dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--accent2);
+        flex-shrink: 0;
+    }
+
+    .algo-info p {
+        margin: 0;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+    }
+
+    /* Panel headers */
+    .panel-encrypt .card-header { color: var(--accent); }
+    .panel-decrypt .card-header { color: var(--accent2); }
+    .panel-decrypt .card-header::before { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+
+    /* Icon labels */
+    .input-icon-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .input-icon-label label { margin: 0; }
+
+    /* Security notice */
+    .security-strip {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2rem;
+        margin-bottom: 2.5rem;
+        padding: 0.8rem 1.5rem;
+        background: rgba(0,0,0,0.25);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        flex-wrap: wrap;
+    }
+
+    .strip-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        letter-spacing: 0.08em;
+    }
+
+    .strip-item .dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--accent2);
+        box-shadow: 0 0 6px var(--accent2);
+    }
+</style>
+
+<div class="page-header">
+    <p class="page-subtitle">// SECURE OPERATIONS PANEL</p>
+    <h1 class="page-title">File <span>Encrypt</span> / <span style="color:var(--accent2)">Decrypt</span></h1>
+    <div class="divider"></div>
+</div>
+
+<!-- Security strip -->
+<div class="security-strip">
+    <div class="strip-item"><div class="dot"></div> AES-256-GCM READY</div>
+    <div class="strip-item"><div class="dot"></div> CHACHA20-POLY1305 READY</div>
+    <div class="strip-item"><div class="dot"></div> END-TO-END ENCRYPTED</div>
+    <div class="strip-item"><div class="dot"></div> NO DATA RETAINED</div>
+</div>
+
+<div class="row g-4">
+    <!-- Encrypt Panel -->
+    <div class="col-md-6 panel-encrypt">
+        <div class="card h-100">
+            <div class="card-header">🔐 Encrypt File</div>
             <div class="card-body">
                 <form method="post" action="/encrypt" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label>Select file</label>
+                    <div class="mb-4">
+                        <div class="input-icon-label">
+                            <label>Select File</label>
+                        </div>
                         <input type="file" name="file" class="form-control" required>
                     </div>
-                    <div class="mb-3">
-                        <label>Algorithm</label>
+                    <div class="mb-4">
+                        <label>Encryption Algorithm</label>
                         <select name="algorithm" class="form-select">
-                            <option value="aes">AES-256-GCM (recommended)</option>
+                            <option value="aes">AES-256-GCM (Recommended)</option>
                             <option value="chacha">ChaCha20-Poly1305</option>
                         </select>
+                        <div class="algo-info mt-2">
+                            <div class="badge-dot"></div>
+                            <p>Military-grade encryption. Output will be a .enc file.</p>
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-primary">Encrypt & Download</button>
+                    <button type="submit" class="btn btn-primary w-100">
+                        🔒 Encrypt &amp; Download
+                    </button>
                 </form>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">Decrypt</div>
+
+    <!-- Decrypt Panel -->
+    <div class="col-md-6 panel-decrypt">
+        <div class="card h-100">
+            <div class="card-header" style="color:var(--accent2)">🔓 Decrypt File</div>
             <div class="card-body">
                 <form method="post" action="/decrypt" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label>Select .enc file</label>
+                    <div class="mb-4">
+                        <div class="input-icon-label">
+                            <label>Select .enc File</label>
+                        </div>
                         <input type="file" name="file" class="form-control" required>
+                        <div class="algo-info mt-2" style="border-color:rgba(0,255,157,0.1)">
+                            <div class="badge-dot" style="background:var(--accent2)"></div>
+                            <p>Upload a previously encrypted .enc file to restore the original.</p>
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-success">Decrypt & Download</button>
+                    <div class="mb-4" style="padding: 1rem; background: rgba(0,0,0,0.2); border-radius:6px; border:1px dashed rgba(0,255,157,0.15)">
+                        <p style="font-family:'Share Tech Mono',monospace; font-size:0.72rem; color:var(--text-muted); margin:0; letter-spacing:0.08em;">
+                            ⚡ Algorithm is auto-detected from the encrypted file header. No configuration needed.
+                        </p>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">
+                        🔓 Decrypt &amp; Download
+                    </button>
                 </form>
             </div>
         </div>

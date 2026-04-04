@@ -1,24 +1,200 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">Register</div>
-            <div class="card-body">
+<style>
+    .auth-wrap {
+        min-height: 70vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem 0;
+    }
+
+    .auth-panel {
+        width: 100%;
+        max-width: 440px;
+    }
+
+    .auth-logo {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .auth-logo .icon-ring {
+        width: 68px; height: 68px;
+        border: 2px solid var(--accent2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        margin: 0 auto 1rem;
+        background: rgba(0,255,157,0.08);
+        box-shadow: 0 0 30px rgba(0,255,157,0.2), inset 0 0 20px rgba(0,255,157,0.05);
+        animation: ringPulse2 3s ease-in-out infinite;
+    }
+
+    @keyframes ringPulse2 {
+        0%, 100% { box-shadow: 0 0 30px rgba(0,255,157,0.2); }
+        50% { box-shadow: 0 0 50px rgba(0,255,157,0.4); }
+    }
+
+    .auth-logo h2 {
+        font-family: 'Rajdhani', sans-serif;
+        font-weight: 700;
+        font-size: 1.5rem;
+        color: #fff;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin: 0;
+    }
+
+    .auth-logo p {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        letter-spacing: 0.2em;
+        margin-top: 0.3rem;
+    }
+
+    .auth-card {
+        background: var(--bg-card);
+        border: 1px solid rgba(0,255,157,0.25);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .auth-card-header {
+        background: rgba(0,255,157,0.06);
+        border-bottom: 1px solid rgba(0,255,157,0.2);
+        padding: 1rem 1.6rem;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    .auth-card-header span {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        letter-spacing: 0.12em;
+    }
+
+    .auth-card-header .tag {
+        background: rgba(0,255,157,0.1);
+        border: 1px solid rgba(0,255,157,0.3);
+        color: var(--accent2);
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.7rem;
+        padding: 0.15rem 0.5rem;
+        border-radius: 3px;
+        letter-spacing: 0.08em;
+    }
+
+    .auth-card-body { padding: 2rem; }
+
+    .field-group { margin-bottom: 1.4rem; }
+
+    .field-group label {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 0.45rem;
+        display: block;
+    }
+
+    .strength-hint {
+        margin-top: 0.45rem;
+        padding: 0.5rem 0.75rem;
+        background: rgba(0,0,0,0.25);
+        border-radius: 4px;
+        border: 1px dashed rgba(0,255,157,0.12);
+    }
+
+    .strength-hint p {
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.68rem;
+        color: var(--text-muted);
+        margin: 0;
+        letter-spacing: 0.06em;
+    }
+
+    .auth-footer-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 1.6rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .btn-register {
+        background: linear-gradient(135deg, rgba(0,255,157,0.2), rgba(0,255,157,0.08)) !important;
+        border: 1px solid var(--accent2) !important;
+        color: var(--accent2) !important;
+        font-family: 'Rajdhani', sans-serif;
+        font-weight: 700;
+        font-size: 0.88rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        padding: 0.6rem 1.8rem;
+        border-radius: 5px;
+        transition: all 0.25s;
+        cursor: pointer;
+    }
+
+    .btn-register:hover {
+        background: linear-gradient(135deg, rgba(0,255,157,0.35), rgba(0,255,157,0.15)) !important;
+        box-shadow: 0 0 20px rgba(0,255,157,0.3);
+        transform: translateY(-1px);
+    }
+
+    .secure-note {
+        text-align: center;
+        margin-top: 1.5rem;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 0.68rem;
+        color: var(--text-muted);
+        letter-spacing: 0.1em;
+    }
+</style>
+
+<div class="auth-wrap">
+    <div class="auth-panel">
+        <div class="auth-logo">
+            <div class="icon-ring">🛡</div>
+            <h2>Create Account</h2>
+            <p>// REGISTER NEW OPERATOR</p>
+        </div>
+
+        <div class="auth-card">
+            <div class="auth-card-header">
+                <span>IDENTITY</span>
+                <div class="tag">NEW REGISTRATION</div>
+            </div>
+            <div class="auth-card-body">
                 <form method="post">
-                    <div class="mb-3">
+                    <div class="field-group">
                         <label>Username</label>
-                        <input type="text" name="username" class="form-control" required>
+                        <input type="text" name="username" class="form-control" placeholder="Choose a username" required>
                     </div>
-                    <div class="mb-3">
+                    <div class="field-group">
                         <label>Password</label>
-                        <input type="password" name="password" class="form-control" required>
+                        <input type="password" name="password" class="form-control" placeholder="••••••••••" required>
+                        <div class="strength-hint">
+                            <p>⚡ Use 8+ characters with letters, numbers &amp; symbols for best security</p>
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-success">Register</button>
-                    <a href="{{ url_for('auth.login') }}" class="btn btn-link">Back to Login</a>
+                    <div class="auth-footer-row">
+                        <button type="submit" class="btn btn-register">→ Register</button>
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-link">← Back to Login</a>
+                    </div>
                 </form>
             </div>
         </div>
+
+        <p class="secure-note">🔒 Your credentials are stored with industry-grade hashing</p>
     </div>
 </div>
 {% endblock %}
