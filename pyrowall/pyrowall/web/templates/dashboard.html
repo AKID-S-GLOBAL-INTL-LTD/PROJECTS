@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PyroWall — Firewall Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:       #080c10;
+    --bg2:      #0d1219;
+    --bg3:      #111820;
+    --border:   #1e2d3d;
+    --border2:  #243444;
+    --accent:   #f97316;
+    --accent2:  #fb923c;
+    --green:    #22c55e;
+    --red:      #ef4444;
+    --blue:     #38bdf8;
+    --purple:   #a78bfa;
+    --yellow:   #fbbf24;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --muted2:   #94a3b8;
+    --font:     'Syne', sans-serif;
+    --mono:     'Space Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(249,115,22,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(249,115,22,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 220px;
+    min-height: 100vh;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; margin-bottom: 10px;
+    box-shadow: 0 0 20px rgba(249,115,22,.4);
+  }
+  .logo-name {
+    font-size: 20px; font-weight: 800; letter-spacing: -0.5px;
+    color: #fff;
+  }
+  .logo-sub {
+    font-size: 11px; color: var(--muted); font-family: var(--mono);
+    margin-top: 2px;
+  }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3);
+    color: var(--green); border-radius: 20px;
+    padding: 4px 10px; font-size: 11px; font-family: var(--mono);
+    margin-top: 10px;
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100%{ opacity:1; transform:scale(1); }
+    50%{ opacity:.5; transform:scale(1.4); }
+  }
+
+  .nav {
+    padding: 16px 12px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .nav-label {
+    font-size: 10px; font-family: var(--mono);
+    color: var(--muted); letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: 8px 8px 4px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px;
+    cursor: pointer; font-size: 14px; font-weight: 600;
+    color: var(--muted2);
+    transition: all .15s;
+    border: 1px solid transparent;
+    text-decoration: none;
+  }
+  .nav-item:hover { background: var(--bg3); color: var(--text); border-color: var(--border); }
+  .nav-item.active {
+    background: rgba(249,115,22,.12);
+    color: var(--accent2);
+    border-color: rgba(249,115,22,.25);
+  }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--muted); font-family: var(--mono);
+  }
+
+  /* ── MAIN ── */
+  .main {
+    margin-left: 220px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+  }
+
+  .topbar {
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(8,12,16,.8);
+    backdrop-filter: blur(10px);
+    position: sticky; top: 0; z-index: 50;
+  }
+
+  .page-title {
+    font-size: 22px; font-weight: 800; letter-spacing: -0.5px;
+  }
+  .page-title span { color: var(--accent); }
+
+  .topbar-right {
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 8px;
+    font-family: var(--font); font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; transition: all .15s;
+    text-decoration: none;
+  }
+  .btn-primary {
+    background: var(--accent); color: #fff;
+  }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+  .btn-ghost {
+    background: var(--bg3); color: var(--muted2);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border2); }
+  .btn-danger {
+    background: rgba(239,68,68,.15); color: var(--red);
+    border: 1px solid rgba(239,68,68,.3);
+  }
+  .btn-danger:hover { background: rgba(239,68,68,.25); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
+  .btn-green {
+    background: rgba(34,197,94,.15); color: var(--green);
+    border: 1px solid rgba(34,197,94,.3);
+  }
+
+  .content { padding: 24px 28px; flex: 1; }
+
+  /* ── PAGES ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── STAT CARDS ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .stat-card:hover { border-color: var(--border2); }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .stat-card.orange::before { background: var(--accent); }
+  .stat-card.red::before    { background: var(--red); }
+  .stat-card.green::before  { background: var(--green); }
+  .stat-card.blue::before   { background: var(--blue); }
+
+  .stat-icon {
+    font-size: 22px; margin-bottom: 12px;
+  }
+  .stat-value {
+    font-size: 32px; font-weight: 800;
+    font-family: var(--mono);
+    letter-spacing: -1px;
+  }
+  .stat-label {
+    font-size: 12px; color: var(--muted); margin-top: 4px;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .stat-sub {
+    font-size: 12px; color: var(--muted); margin-top: 8px;
+    font-family: var(--mono);
+  }
+
+  /* ── GRID LAYOUTS ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .three-col { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+
+  /* ── PANELS ── */
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-title {
+    font-size: 15px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-body { padding: 20px; }
+
+  /* ── LIVE FEED ── */
+  .feed-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .feed-table th {
+    text-align: left; padding: 8px 12px;
+    color: var(--muted); font-size: 10px;
+    text-transform: uppercase; letter-spacing: .08em;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font);
+  }
+  .feed-table td {
+    padding: 7px 12px;
+    border-bottom: 1px solid rgba(30,45,61,.5);
+    vertical-align: middle;
+  }
+  .feed-table tr:hover td { background: rgba(255,255,255,.02); }
+  .feed-table tr:last-child td { border-bottom: none; }
+
+  .badge {
+    display: inline-block; padding: 2px 8px;
+    border-radius: 4px; font-size: 11px; font-weight: 700;
+    font-family: var(--mono);
+  }
+  .badge-block { background: rgba(239,68,68,.15); color: var(--red); }
+  .badge-allow { background: rgba(34,197,94,.12); color: var(--green); }
+  .badge-proto {
+    background: rgba(56,189,248,.1); color: var(--blue);
+    font-size: 10px; padding: 2px 6px;
+  }
+
+  /* ── RULES TABLE ── */
+  .rules-table {
+    width: 100%; border-collapse: collapse;
+  }
+  .rules-table th {
+    text-align: left; padding: 10px 16px;
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .07em;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font);
+  }
+  .rules-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(30,45,61,.6);
+    font-size: 13px;
+  }
+  .rules-table tr:hover td { background: rgba(255,255,255,.015); }
+  .rules-table tr:last-child td { border: none; }
+
+  .rule-name { font-weight: 600; font-size: 14px; }
+  .rule-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .rule-default { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+
+  .toggle {
+    position: relative; display: inline-block;
+    width: 36px; height: 20px;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 20px; cursor: pointer;
+    transition: all .2s;
+  }
+  .toggle-slider::before {
+    content: ''; position: absolute;
+    width: 14px; height: 14px; border-radius: 50%;
+    left: 2px; top: 2px;
+    background: var(--muted);
+    transition: all .2s;
+  }
+  .toggle input:checked + .toggle-slider { background: rgba(34,197,94,.2); border-color: var(--green); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(16px); background: var(--green); }
+
+  /* ── BLACKLIST ── */
+  .ip-card {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(30,45,61,.6);
+  }
+  .ip-card:last-child { border: none; }
+  .ip-addr { font-family: var(--mono); font-size: 14px; font-weight: 700; }
+  .ip-reason { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .ip-date { font-size: 11px; font-family: var(--mono); color: var(--muted); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.7);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: none;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    width: 520px; max-width: 95vw;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 25px 80px rgba(0,0,0,.5);
+  }
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title { font-size: 18px; font-weight: 800; }
+  .modal-close {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-close:hover { color: var(--text); }
+  .modal-body { padding: 24px; }
+  .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 10px; justify-content: flex-end;
+  }
+
+  /* ── FORM ── */
+  .form-group { margin-bottom: 16px; }
+  .form-label {
+    display: block; font-size: 12px; font-weight: 600;
+    color: var(--muted2); margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  .form-control {
+    width: 100%; padding: 10px 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text);
+    font-family: var(--mono); font-size: 13px;
+    outline: none; transition: border-color .2s;
+  }
+  .form-control:focus { border-color: var(--accent); }
+  .form-control option { background: var(--bg2); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-hint { font-size: 11px; color: var(--muted); margin-top: 4px; font-family: var(--mono); }
+
+  /* ── LOGS ── */
+  .log-filter-bar {
+    display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .filter-chip {
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); background: var(--bg3);
+    color: var(--muted2); transition: all .15s;
+  }
+  .filter-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(249,115,22,.1); }
+  .filter-chip:hover { color: var(--text); border-color: var(--border2); }
+
+  .search-input {
+    flex: 1; min-width: 200px;
+    padding: 7px 14px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text);
+    font-family: var(--mono); font-size: 12px;
+    outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); }
+
+  /* ── SETTINGS ── */
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .setting-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(30,45,61,.6);
+  }
+  .setting-row:last-child { border: none; }
+  .setting-info { flex: 1; }
+  .setting-name { font-size: 14px; font-weight: 600; }
+  .setting-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* ── CHART ── */
+  .chart-container { position: relative; height: 220px; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center; padding: 48px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* ── TOAST ── */
+  .toast-container {
+    position: fixed; bottom: 24px; right: 24px;
+    display: flex; flex-direction: column; gap: 8px;
+    z-index: 9999;
+  }
+  .toast {
+    padding: 12px 18px; border-radius: 10px;
+    font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+    animation: slideIn .25s ease;
+    max-width: 320px;
+  }
+  .toast-success { background: rgba(34,197,94,.2); border: 1px solid rgba(34,197,94,.4); color: var(--green); }
+  .toast-error   { background: rgba(239,68,68,.2);  border: 1px solid rgba(239,68,68,.4);  color: var(--red); }
+  .toast-info    { background: rgba(56,189,248,.15); border: 1px solid rgba(56,189,248,.3); color: var(--blue); }
+  @keyframes slideIn {
+    from { transform: translateX(40px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+    .two-col, .three-col { grid-template-columns: 1fr; }
+    .settings-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">🔥</div>
+    <div class="logo-name">PyroWall</div>
+    <div class="logo-sub">v1.0 — Network Firewall</div>
+    <div class="status-pill"><span class="status-dot"></span>Active</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-label">Monitor</div>
+    <a class="nav-item active" data-page="dashboard" onclick="showPage('dashboard', this)">
+      <span class="nav-icon">📊</span> Dashboard
+    </a>
+    <a class="nav-item" data-page="logs" onclick="showPage('logs', this)">
+      <span class="nav-icon">📋</span> Traffic Logs
+    </a>
+    <div class="nav-label" style="margin-top:8px">Control</div>
+    <a class="nav-item" data-page="rules" onclick="showPage('rules', this)">
+      <span class="nav-icon">⚙️</span> Firewall Rules
+    </a>
+    <a class="nav-item" data-page="blacklist" onclick="showPage('blacklist', this)">
+      <span class="nav-icon">🚫</span> IP Blacklist
+    </a>
+    <div class="nav-label" style="margin-top:8px">System</div>
+    <a class="nav-item" data-page="settings" onclick="showPage('settings', this)">
+      <span class="nav-icon">🔧</span> Settings
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <div id="sys-hostname">Loading...</div>
+    <div id="sys-platform" style="margin-top:2px;color:#475569">Platform info</div>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+  <div class="topbar">
+    <div class="page-title" id="page-title"><span>Dashboard</span></div>
+    <div class="topbar-right">
+      <div id="engine-toggle-wrap">
+        <button class="btn btn-ghost btn-sm" id="engine-btn" onclick="toggleEngine()">⏸ Pause Engine</button>
+      </div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--muted)" id="clock"></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── DASHBOARD PAGE ── -->
+    <div id="page-dashboard" class="page active">
+      <div class="stats-grid">
+        <div class="stat-card orange">
+          <div class="stat-icon">📦</div>
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-label">Total Packets</div>
+          <div class="stat-sub" id="stat-today">Today: 0</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon">🛑</div>
+          <div class="stat-value" id="stat-blocked">0</div>
+          <div class="stat-label">Blocked</div>
+          <div class="stat-sub" id="stat-block-pct">0% of traffic</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="stat-allowed">0</div>
+          <div class="stat-label">Allowed</div>
+          <div class="stat-sub" id="stat-rule-count">0 rules active</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">🌐</div>
+          <div class="stat-value" id="stat-cpu">0%</div>
+          <div class="stat-label">CPU Usage</div>
+          <div class="stat-sub" id="stat-mem">RAM: 0%</div>
+        </div>
+      </div>
+
+      <div class="three-col">
+        <div>
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">📡 Live Traffic Feed</div>
+              <span style="font-family:var(--mono);font-size:11px;color:var(--green)">● LIVE</span>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="feed-table">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Action</th>
+                    <th>Src IP</th>
+                    <th>Dst IP</th>
+                    <th>Port</th>
+                    <th>Proto</th>
+                    <th>Rule</th>
+                  </tr>
+                </thead>
+                <tbody id="live-feed-body">
+                  <tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Waiting for traffic...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel" style="margin-bottom:20px">
+            <div class="panel-header">
+              <div class="panel-title">📊 Traffic Split</div>
+            </div>
+            <div class="panel-body">
+              <div class="chart-container">
+                <canvas id="donut-chart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">🔴 Top Blocked IPs</div>
+            </div>
+            <div id="top-blocked-ips">
+              <div class="empty-state" style="padding:20px">
+                <div class="empty-text">No blocked IPs yet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📈 Packet Activity</div>
+        </div>
+        <div class="panel-body">
+          <div class="chart-container" style="height:160px">
+            <canvas id="line-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div><!-- /dashboard -->
+
+    <!-- ── RULES PAGE ── -->
+    <div id="page-rules" class="page">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">⚙️ Firewall Rules <span style="font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:400" id="rule-count-badge"></span></div>
+          <button class="btn btn-primary btn-sm" onclick="openRuleModal()">+ New Rule</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="rules-table">
+            <thead>
+              <tr>
+                <th>Rule</th>
+                <th>Action</th>
+                <th>Protocol</th>
+                <th>Src IP</th>
+                <th>Dst IP</th>
+                <th>Port</th>
+                <th>Direction</th>
+                <th>Priority</th>
+                <th>Enabled</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="rules-body">
+              <tr><td colspan="10" style="text-align:center;padding:30px;color:var(--muted)">Loading rules...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- /rules -->
+
+    <!-- ── BLACKLIST PAGE ── -->
+    <div id="page-blacklist" class="page">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🚫 IP Blacklist</div>
+          <button class="btn btn-primary btn-sm" onclick="openBlacklistModal()">+ Block IP</button>
+        </div>
+        <div id="blacklist-body">
+          <div class="empty-state">
+            <div class="empty-icon">🚫</div>
+            <div class="empty-text">No IPs blacklisted yet</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /blacklist -->
+
+    <!-- ── LOGS PAGE ── -->
+    <div id="page-logs" class="page">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📋 Traffic Logs</div>
+          <div style="display:flex;gap:8px">
+            <a href="/api/logs/export" class="btn btn-ghost btn-sm">⬇ Export CSV</a>
+            <button class="btn btn-danger btn-sm" onclick="clearLogs()">🗑 Clear</button>
+          </div>
+        </div>
+        <div class="panel-body" style="padding-bottom:0">
+          <div class="log-filter-bar">
+            <button class="filter-chip active" data-filter="all"  onclick="filterLogs('all', this)">All</button>
+            <button class="filter-chip" data-filter="block" onclick="filterLogs('block', this)">Blocked</button>
+            <button class="filter-chip" data-filter="allow" onclick="filterLogs('allow', this)">Allowed</button>
+            <input class="search-input" id="log-search" placeholder="Search IP address..." oninput="searchLogs(this.value)">
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="feed-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Action</th>
+                <th>Src IP</th>
+                <th>Dst IP</th>
+                <th>Src Port</th>
+                <th>Dst Port</th>
+                <th>Protocol</th>
+                <th>Rule</th>
+                <th>Size</th>
+                <th>Flags</th>
+              </tr>
+            </thead>
+            <tbody id="logs-body">
+              <tr><td colspan="10" style="text-align:center;padding:30px;color:var(--muted)">Loading logs...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- /logs -->
+
+    <!-- ── SETTINGS PAGE ── -->
+    <div id="page-settings" class="page">
+      <div class="settings-grid">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">⚙️ Engine Settings</div>
+          </div>
+          <div class="panel-body" id="settings-body">
+            <div style="color:var(--muted);font-size:13px">Loading...</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">💻 System Info</div>
+          </div>
+          <div class="panel-body" id="system-info-body">
+            <div style="color:var(--muted);font-size:13px">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🌐 Network Interfaces</div>
+        </div>
+        <div id="interfaces-body" class="panel-body">
+          <div style="color:var(--muted);font-size:13px">Loading...</div>
+        </div>
+      </div>
+    </div><!-- /settings -->
+
+  </div><!-- /content -->
+</main>
+
+<!-- RULE MODAL -->
+<div class="modal-overlay" id="rule-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="rule-modal-title">New Firewall Rule</div>
+      <button class="modal-close" onclick="closeRuleModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="rule-edit-id">
+      <div class="form-group">
+        <label class="form-label">Rule Name *</label>
+        <input class="form-control" id="rule-name" placeholder="e.g. Block Telnet">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input class="form-control" id="rule-desc" placeholder="Optional description">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Action *</label>
+          <select class="form-control" id="rule-action">
+            <option value="block">Block</option>
+            <option value="allow">Allow</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Protocol</label>
+          <select class="form-control" id="rule-protocol">
+            <option value="any">Any</option>
+            <option value="tcp">TCP</option>
+            <option value="udp">UDP</option>
+            <option value="icmp">ICMP</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Direction</label>
+          <select class="form-control" id="rule-direction">
+            <option value="both">Both</option>
+            <option value="inbound">Inbound</option>
+            <option value="outbound">Outbound</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Priority</label>
+          <input class="form-control" id="rule-priority" type="number" value="100" min="1" max="999">
+          <div class="form-hint">Lower = higher priority</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Source IP</label>
+          <input class="form-control" id="rule-src-ip" placeholder="any or 192.168.1.0/24">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Destination IP</label>
+          <input class="form-control" id="rule-dst-ip" placeholder="any or 10.0.0.1">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Source Port</label>
+          <input class="form-control" id="rule-src-port" placeholder="any or 1024-2048">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Destination Port</label>
+          <input class="form-control" id="rule-dst-port" placeholder="any or 80">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeRuleModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRule()">Save Rule</button>
+    </div>
+  </div>
+</div>
+
+<!-- BLACKLIST MODAL -->
+<div class="modal-overlay" id="blacklist-modal">
+  <div class="modal" style="width:420px">
+    <div class="modal-header">
+      <div class="modal-title">Block IP Address</div>
+      <button class="modal-close" onclick="closeBlacklistModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">IP Address *</label>
+        <input class="form-control" id="blacklist-ip" placeholder="e.g. 192.168.1.50 or 10.0.0.0/24">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Reason</label>
+        <input class="form-control" id="blacklist-reason" placeholder="Optional reason">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeBlacklistModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="addToBlacklist()">Block IP</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ── STATE
+let currentPage = 'dashboard';
+let logFilter = 'all';
+let logSearch = '';
+let engineEnabled = true;
+let donutChart, lineChart;
+let lineData = { labels: [], blocked: [], allowed: [] };
+
+// ── CLOCK
+setInterval(() => {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('en-GB', { hour12: false });
+}, 1000);
+
+// ── PAGE NAVIGATION
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  currentPage = name;
+
+  const titles = {
+    dashboard: 'Dashboard', rules: 'Firewall Rules',
+    blacklist: 'IP Blacklist', logs: 'Traffic Logs', settings: 'Settings'
+  };
+  document.getElementById('page-title').innerHTML = `<span>${titles[name] || name}</span>`;
+
+  if (name === 'rules') loadRules();
+  if (name === 'blacklist') loadBlacklist();
+  if (name === 'logs') loadLogs();
+  if (name === 'settings') loadSettings();
+}
+
+// ── TOAST
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = (type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️') + ' ' + msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+// ── CHARTS
+function initCharts() {
+  const darkOpts = {
+    plugins: { legend: { labels: { color: '#64748b', font: { family: 'Syne' } } } },
+    scales: {
+      x: { ticks: { color: '#475569' }, grid: { color: 'rgba(30,45,61,.5)' } },
+      y: { ticks: { color: '#475569' }, grid: { color: 'rgba(30,45,61,.5)' } }
+    }
+  };
+
+  donutChart = new Chart(document.getElementById('donut-chart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Allowed', 'Blocked'],
+      datasets: [{ data: [0, 0],
+        backgroundColor: ['rgba(34,197,94,.7)', 'rgba(239,68,68,.7)'],
+        borderColor: ['#22c55e', '#ef4444'],
+        borderWidth: 1 }]
+    },
+    options: {
+      cutout: '70%',
+      plugins: {
+        legend: { labels: { color: '#94a3b8', font: { family: 'Syne' } } }
+      }
+    }
+  });
+
+  lineChart = new Chart(document.getElementById('line-chart'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        { label: 'Blocked', data: [], borderColor: '#ef4444',
+          backgroundColor: 'rgba(239,68,68,.1)', fill: true, tension: 0.4 },
+        { label: 'Allowed', data: [], borderColor: '#22c55e',
+          backgroundColor: 'rgba(34,197,94,.08)', fill: true, tension: 0.4 }
+      ]
+    },
+    options: { ...darkOpts, animation: false,
+      plugins: { legend: { labels: { color: '#64748b', font: { family: 'Syne' } } } }
+    }
+  });
+}
+
+// ── DASHBOARD REFRESH
+async function refreshDashboard() {
+  try {
+    const [statsRes, liveRes, sysRes] = await Promise.all([
+      fetch('/api/stats'), fetch('/api/live'), fetch('/api/system')
+    ]);
+    const stats = await statsRes.json();
+    const live  = await liveRes.json();
+    const sys   = await sysRes.json();
+
+    document.getElementById('stat-total').textContent   = fmtNum(stats.total || 0);
+    document.getElementById('stat-blocked').textContent = fmtNum(stats.blocked || 0);
+    document.getElementById('stat-allowed').textContent = fmtNum(stats.allowed || 0);
+    document.getElementById('stat-today').textContent   = `Today: ${fmtNum(stats.today || 0)}`;
+
+    const pct = stats.total > 0 ? Math.round((stats.blocked / stats.total) * 100) : 0;
+    document.getElementById('stat-block-pct').textContent = `${pct}% of traffic`;
+
+    document.getElementById('stat-cpu').textContent = `${sys.cpu_pct || 0}%`;
+    document.getElementById('stat-mem').textContent = `RAM: ${sys.mem_pct || 0}%`;
+
+    document.getElementById('sys-hostname').textContent = sys.hostname || '—';
+    document.getElementById('sys-platform').textContent = sys.platform || '—';
+
+    // Donut
+    donutChart.data.datasets[0].data = [stats.allowed || 0, stats.blocked || 0];
+    donutChart.update('none');
+
+    // Line chart sliding window
+    const now = new Date().toLocaleTimeString('en-GB', { hour12: false });
+    lineData.labels.push(now);
+    lineData.blocked.push(stats.blocked || 0);
+    lineData.allowed.push(stats.allowed || 0);
+    if (lineData.labels.length > 20) {
+      lineData.labels.shift(); lineData.blocked.shift(); lineData.allowed.shift();
+    }
+    lineChart.data.labels = lineData.labels;
+    lineChart.data.datasets[0].data = lineData.blocked;
+    lineChart.data.datasets[1].data = lineData.allowed;
+    lineChart.update('none');
+
+    // Top blocked IPs
+    const container = document.getElementById('top-blocked-ips');
+    if (stats.top_blocked_ips && stats.top_blocked_ips.length) {
+      container.innerHTML = stats.top_blocked_ips.map(r => `
+        <div class="ip-card">
+          <div>
+            <div class="ip-addr" style="color:var(--red)">${r.src_ip}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-family:var(--mono);font-size:13px;color:var(--muted)">${r.cnt}x</span>
+            <button class="btn btn-danger btn-sm" onclick="quickBlacklist('${r.src_ip}')">Block</button>
+          </div>
+        </div>`).join('');
+    }
+
+    // Live feed (last 15)
+    if (live.length) {
+      const tbody = document.getElementById('live-feed-body');
+      tbody.innerHTML = live.slice(0, 15).map(p => `
+        <tr>
+          <td style="color:var(--muted)">${p.timestamp || '—'}</td>
+          <td><span class="badge badge-${p.action}">${p.action.toUpperCase()}</span></td>
+          <td>${p.src_ip || '—'}</td>
+          <td>${p.dst_ip || '—'}</td>
+          <td style="color:var(--muted2)">${p.dst_port || '—'}</td>
+          <td><span class="badge badge-proto">${(p.protocol||'').toUpperCase()}</span></td>
+          <td style="color:var(--muted);font-size:11px">${p.rule_name || '—'}</td>
+        </tr>`).join('');
+    }
+  } catch (e) {
+    console.error('Dashboard refresh error:', e);
+  }
+}
+
+function fmtNum(n) {
+  return n >= 1000000 ? (n/1000000).toFixed(1)+'M'
+       : n >= 1000    ? (n/1000).toFixed(1)+'K'
+       : String(n);
+}
+
+// ── RULES
+async function loadRules() {
+  const res = await fetch('/api/rules');
+  const rules = await res.json();
+  document.getElementById('rule-count-badge').textContent = `(${rules.length})`;
+
+  const tbody = document.getElementById('rules-body');
+  if (!rules.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--muted)">No rules configured</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rules.map(r => `
+    <tr>
+      <td>
+        <div class="rule-name">${esc(r.name)}</div>
+        <div class="rule-desc">${esc(r.description || '')}</div>
+        ${r.is_default ? '<div class="rule-default">DEFAULT</div>' : ''}
+      </td>
+      <td><span class="badge ${r.action === 'block' ? 'badge-block' : 'badge-allow'}">${r.action.toUpperCase()}</span></td>
+      <td><span class="badge badge-proto">${(r.protocol||'any').toUpperCase()}</span></td>
+      <td style="font-family:var(--mono);font-size:12px">${r.src_ip || 'any'}</td>
+      <td style="font-family:var(--mono);font-size:12px">${r.dst_ip || 'any'}</td>
+      <td style="font-family:var(--mono);font-size:12px">${r.dst_port || 'any'}</td>
+      <td style="font-size:12px;color:var(--muted2)">${r.direction || 'both'}</td>
+      <td style="font-family:var(--mono);font-size:12px;color:var(--muted)">${r.priority}</td>
+      <td>
+        <label class="toggle">
+          <input type="checkbox" ${r.enabled ? 'checked' : ''}
+            onchange="toggleRule(${r.id}, this)">
+          <span class="toggle-slider"></span>
+        </label>
+      </td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="editRule(${r.id})">Edit</button>
+          ${!r.is_default ? `<button class="btn btn-danger btn-sm" onclick="deleteRule(${r.id})">Del</button>` : ''}
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function openRuleModal(rule) {
+  document.getElementById('rule-edit-id').value = '';
+  document.getElementById('rule-name').value = '';
+  document.getElementById('rule-desc').value = '';
+  document.getElementById('rule-action').value = 'block';
+  document.getElementById('rule-protocol').value = 'any';
+  document.getElementById('rule-direction').value = 'both';
+  document.getElementById('rule-priority').value = '100';
+  document.getElementById('rule-src-ip').value = '';
+  document.getElementById('rule-dst-ip').value = '';
+  document.getElementById('rule-src-port').value = '';
+  document.getElementById('rule-dst-port').value = '';
+  document.getElementById('rule-modal-title').textContent = 'New Firewall Rule';
+
+  if (rule) {
+    document.getElementById('rule-modal-title').textContent = 'Edit Rule';
+    document.getElementById('rule-edit-id').value = rule.id;
+    document.getElementById('rule-name').value = rule.name;
+    document.getElementById('rule-desc').value = rule.description || '';
+    document.getElementById('rule-action').value = rule.action;
+    document.getElementById('rule-protocol').value = rule.protocol || 'any';
+    document.getElementById('rule-direction').value = rule.direction || 'both';
+    document.getElementById('rule-priority').value = rule.priority || 100;
+    document.getElementById('rule-src-ip').value = rule.src_ip === 'any' ? '' : rule.src_ip;
+    document.getElementById('rule-dst-ip').value = rule.dst_ip === 'any' ? '' : rule.dst_ip;
+    document.getElementById('rule-src-port').value = rule.src_port === 'any' ? '' : rule.src_port;
+    document.getElementById('rule-dst-port').value = rule.dst_port === 'any' ? '' : rule.dst_port;
+  }
+  document.getElementById('rule-modal').classList.add('open');
+}
+
+function closeRuleModal() {
+  document.getElementById('rule-modal').classList.remove('open');
+}
+
+async function saveRule() {
+  const name = document.getElementById('rule-name').value.trim();
+  if (!name) { toast('Rule name is required', 'error'); return; }
+
+  const data = {
+    name, description: document.getElementById('rule-desc').value,
+    action:    document.getElementById('rule-action').value,
+    protocol:  document.getElementById('rule-protocol').value,
+    direction: document.getElementById('rule-direction').value,
+    priority:  document.getElementById('rule-priority').value,
+    src_ip:    document.getElementById('rule-src-ip').value || 'any',
+    dst_ip:    document.getElementById('rule-dst-ip').value || 'any',
+    src_port:  document.getElementById('rule-src-port').value || 'any',
+    dst_port:  document.getElementById('rule-dst-port').value || 'any',
+  };
+
+  const editId = document.getElementById('rule-edit-id').value;
+  const url    = editId ? `/api/rules/${editId}` : '/api/rules';
+  const method = editId ? 'PUT' : 'POST';
+
+  const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  const json = await res.json();
+
+  if (res.ok) {
+    toast(editId ? 'Rule updated' : 'Rule created');
+    closeRuleModal();
+    loadRules();
+  } else {
+    toast(json.error || 'Error saving rule', 'error');
+  }
+}
+
+async function editRule(id) {
+  const res = await fetch('/api/rules');
+  const rules = await res.json();
+  const rule = rules.find(r => r.id === id);
+  if (rule) openRuleModal(rule);
+}
+
+async function deleteRule(id) {
+  if (!confirm('Delete this rule?')) return;
+  const res = await fetch(`/api/rules/${id}`, { method: 'DELETE' });
+  if (res.ok) { toast('Rule deleted'); loadRules(); }
+  else { const j = await res.json(); toast(j.error || 'Error', 'error'); }
+}
+
+async function toggleRule(id, checkbox) {
+  const res = await fetch(`/api/rules/${id}/toggle`, { method: 'POST' });
+  const json = await res.json();
+  if (!res.ok) {
+    checkbox.checked = !checkbox.checked;
+    toast('Failed to toggle rule', 'error');
+  }
+}
+
+// ── BLACKLIST
+async function loadBlacklist() {
+  const res = await fetch('/api/blacklist');
+  const list = await res.json();
+  const container = document.getElementById('blacklist-body');
+
+  if (!list.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">🚫</div><div class="empty-text">No IPs blacklisted</div></div>';
+    return;
+  }
+  container.innerHTML = list.map(e => `
+    <div class="ip-card">
+      <div>
+        <div class="ip-addr">${esc(e.ip_address)}</div>
+        <div class="ip-reason">${esc(e.reason || 'No reason given')}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="ip-date">${(e.added_at||'').slice(0,10)}</div>
+        <button class="btn btn-danger btn-sm" onclick="removeBlacklist(${e.id}, '${esc(e.ip_address)}')">Remove</button>
+      </div>
+    </div>`).join('');
+}
+
+function openBlacklistModal() {
+  document.getElementById('blacklist-ip').value = '';
+  document.getElementById('blacklist-reason').value = '';
+  document.getElementById('blacklist-modal').classList.add('open');
+}
+function closeBlacklistModal() {
+  document.getElementById('blacklist-modal').classList.remove('open');
+}
+
+async function addToBlacklist() {
+  const ip     = document.getElementById('blacklist-ip').value.trim();
+  const reason = document.getElementById('blacklist-reason').value.trim();
+  if (!ip) { toast('IP address is required', 'error'); return; }
+
+  const res = await fetch('/api/blacklist', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ ip_address: ip, reason })
+  });
+  const json = await res.json();
+  if (res.ok) { toast(`${ip} blocked`); closeBlacklistModal(); loadBlacklist(); }
+  else { toast(json.error || 'Error', 'error'); }
+}
+
+async function removeBlacklist(id) {
+  const res = await fetch(`/api/blacklist/${id}`, { method: 'DELETE' });
+  if (res.ok) { toast('IP removed from blacklist'); loadBlacklist(); }
+}
+
+async function quickBlacklist(ip) {
+  const res = await fetch('/api/blacklist', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ ip_address: ip, reason: 'Blocked from dashboard' })
+  });
+  if (res.ok) toast(`${ip} blacklisted`);
+  else toast('Already blacklisted or error', 'error');
+}
+
+// ── LOGS
+async function loadLogs() {
+  const url = `/api/logs?limit=300&action=${logFilter}&ip=${logSearch}`;
+  const res = await fetch(url);
+  const logs = await res.json();
+  const tbody = document.getElementById('logs-body');
+
+  if (!logs.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--muted)">No logs found</td></tr>';
+    return;
+  }
+  tbody.innerHTML = logs.map(l => `
+    <tr>
+      <td style="color:var(--muted);white-space:nowrap">${(l.timestamp||'').slice(0,19)}</td>
+      <td><span class="badge badge-${l.action}">${l.action.toUpperCase()}</span></td>
+      <td style="font-family:var(--mono)">${l.src_ip||'—'}</td>
+      <td style="font-family:var(--mono)">${l.dst_ip||'—'}</td>
+      <td style="font-family:var(--mono);color:var(--muted)">${l.src_port||'—'}</td>
+      <td style="font-family:var(--mono);color:var(--muted)">${l.dst_port||'—'}</td>
+      <td><span class="badge badge-proto">${(l.protocol||'').toUpperCase()}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${esc(l.rule_name||'—')}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${l.size||0}B</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--purple)">${l.flags||'—'}</td>
+    </tr>`).join('');
+}
+
+function filterLogs(filter, el) {
+  logFilter = filter;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  loadLogs();
+}
+
+let searchTimeout;
+function searchLogs(val) {
+  logSearch = val;
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(loadLogs, 300);
+}
+
+async function clearLogs() {
+  if (!confirm('Clear all traffic logs? This cannot be undone.')) return;
+  const res = await fetch('/api/logs/clear', { method: 'POST' });
+  if (res.ok) { toast('Logs cleared'); loadLogs(); }
+}
+
+// ── SETTINGS
+async function loadSettings() {
+  const [sRes, iRes] = await Promise.all([fetch('/api/settings'), fetch('/api/system')]);
+  const settings = await sRes.json();
+  const info = await iRes.json();
+
+  const settingsMap = [
+    { key: 'engine_enabled', label: 'Packet Engine',       desc: 'Enable or disable packet inspection' },
+    { key: 'log_allowed',    label: 'Log Allowed Traffic',  desc: 'Store allowed packets in the database' },
+    { key: 'log_blocked',    label: 'Log Blocked Traffic',  desc: 'Store blocked packets in the database' },
+  ];
+
+  document.getElementById('settings-body').innerHTML = `
+    ${settingsMap.map(s => `
+      <div class="setting-row">
+        <div class="setting-info">
+          <div class="setting-name">${s.label}</div>
+          <div class="setting-desc">${s.desc}</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" data-key="${s.key}"
+            ${settings[s.key] === '1' ? 'checked' : ''}
+            onchange="saveSetting('${s.key}', this.checked ? '1' : '0')">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>`).join('')}
+    <div style="margin-top:16px">
+      <label class="form-label">Max Log Entries</label>
+      <input class="form-control" id="max-log-input" type="number"
+        value="${settings.max_log_entries || 50000}"
+        onchange="saveSetting('max_log_entries', this.value)">
+      <div class="form-hint">Older entries auto-purged beyond this limit</div>
+    </div>
+  `;
+
+  document.getElementById('system-info-body').innerHTML = `
+    <div class="setting-row"><div class="setting-name">Platform</div><div style="font-family:var(--mono);font-size:13px">${info.platform}</div></div>
+    <div class="setting-row"><div class="setting-name">Hostname</div><div style="font-family:var(--mono);font-size:13px">${info.hostname}</div></div>
+    <div class="setting-row"><div class="setting-name">CPU Usage</div><div style="font-family:var(--mono);font-size:13px;color:var(--accent)">${info.cpu_pct}%</div></div>
+    <div class="setting-row"><div class="setting-name">Memory</div><div style="font-family:var(--mono);font-size:13px;color:var(--blue)">${info.mem_pct}%</div></div>
+    <div class="setting-row" style="border:none">
+      <div class="setting-name">Network I/O</div>
+      <div style="font-size:12px;color:var(--muted);font-family:var(--mono)">
+        ↑ ${fmtBytes(info.bytes_sent)} / ↓ ${fmtBytes(info.bytes_recv)}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('interfaces-body').innerHTML = info.interfaces && info.interfaces.length
+    ? info.interfaces.map(i => `
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <span style="font-family:var(--mono);font-weight:700;color:var(--blue)">${esc(i.name)}</span>
+          <span style="font-family:var(--mono);font-size:13px;color:var(--muted)">${esc(i.ip)}</span>
+        </div>`).join('')
+    : '<div style="color:var(--muted)">No interfaces found</div>';
+}
+
+function fmtBytes(b) {
+  if (b >= 1e9) return (b/1e9).toFixed(1)+'GB';
+  if (b >= 1e6) return (b/1e6).toFixed(1)+'MB';
+  if (b >= 1e3) return (b/1e3).toFixed(1)+'KB';
+  return b+'B';
+}
+
+async function saveSetting(key, value) {
+  const res = await fetch('/api/settings', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ [key]: value })
+  });
+  if (res.ok) toast('Setting saved');
+  else toast('Failed to save', 'error');
+}
+
+// ── ENGINE TOGGLE
+async function toggleEngine() {
+  engineEnabled = !engineEnabled;
+  await saveSetting('engine_enabled', engineEnabled ? '1' : '0');
+  const btn = document.getElementById('engine-btn');
+  btn.textContent = engineEnabled ? '⏸ Pause Engine' : '▶ Resume Engine';
+  btn.className = 'btn btn-sm ' + (engineEnabled ? 'btn-ghost' : 'btn-green');
+}
+
+// ── INIT
+window.addEventListener('load', () => {
+  initCharts();
+  refreshDashboard();
+  setInterval(refreshDashboard, 2000);
+});
+</script>
+</body>
+</html>
