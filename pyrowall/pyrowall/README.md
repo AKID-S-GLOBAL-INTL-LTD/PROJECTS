@@ -36,7 +36,7 @@ enforces configurable rules, and exposes a full control panel at `http://localho
 ### 1. Clone / download the project
 
 ```bash
-git clone https://github.com/yourname/pyrowall.git
+git clone https://github.com/abrahamakinwale/PROJECTS.git
 cd pyrowall
 ```
 
