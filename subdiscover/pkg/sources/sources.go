@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/AKID-S-GLOBAL-INTL-LTD/subdiscover/pkg/display"
+	"github.com/abrahamakinwale/PROJECTS/subdiscover/pkg/display"
 )
 
 // GatherAll queries all OSINT sources concurrently and returns subdomain→source map

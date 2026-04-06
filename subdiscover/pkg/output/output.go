@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AKID-S-GLOBAL-INTL-LTD/subdiscover/pkg/httpprobe"
-	"github.com/AKID-S-GLOBAL-INTL-LTD/subdiscover/pkg/resolver"
+	"github.com/abrahamakinwale/PROJECTS/subdiscover/pkg/httpprobe"
+	"github.com/abrahamakinwale/PROJECTS/subdiscover/pkg/resolver"
 )
 
 // ScanReport is the full structured output

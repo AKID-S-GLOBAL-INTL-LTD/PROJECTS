@@ -129,50 +129,6 @@ func PrintResult(subdomain string, ips []string, status string, extra string) {
 	)
 }
 
-func PrintHTTPResult(subdomain, url string, code int, title string) {
-	var codeColor string
-	switch {
-	case code >= 200 && code < 300:
-		codeColor = BrightGreen
-	case code >= 300 && code < 400:
-		codeColor = BrightYellow
-	case code >= 400:
-		codeColor = BrightRed
-	default:
-		codeColor = Dim
-	}
-	fmt.Printf("  %s│%s  %s%s[%d]%s  %-40s  %s%s%s\n",
-		Cyan, Reset,
-		Bold, codeColor, code, Reset,
-		BrightWhite+url+Reset,
-		Dim, truncate(title, 35), Reset,
-	)
-}
-
-func PrintAsset(assetType, value, source string) {
-	var typeColor string
-	switch assetType {
-	case "IP":
-		typeColor = BrightYellow
-	case "CNAME":
-		typeColor = BrightMagenta
-	case "MX":
-		typeColor = BrightBlue
-	case "TXT":
-		typeColor = Cyan
-	case "NS":
-		typeColor = BrightGreen
-	default:
-		typeColor = White
-	}
-	fmt.Printf("  %s│%s  %s%-6s%s  %-45s  %sfrom: %s%s\n",
-		Cyan, Reset,
-		typeColor+Bold, assetType, Reset,
-		BrightWhite+value+Reset,
-		Dim, source, Reset,
-	)
-}
-
 func PrintTableHeader() {
 	fmt.Printf("  %s│%s  %s%-6s  %-45s  %-20s  %s%s\n",
 		Cyan, Reset, Bold+Dim,

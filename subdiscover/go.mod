@@ -1,4 +1,4 @@
-module github.com/AKID-S-GLOBAL-INTL-LTD/subdiscover
+module github.com/abrahamakinwale/PROJECTS/subdiscover
 
 go 1.21
 

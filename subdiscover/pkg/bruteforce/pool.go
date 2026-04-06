@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/AKID-S-GLOBAL-INTL-LTD/subdiscover/pkg/display"
-	"github.com/AKID-S-GLOBAL-INTL-LTD/subdiscover/pkg/resolver"
+	"github.com/abrahamakinwale/PROJECTS/subdiscover/pkg/display"
+	"github.com/abrahamakinwale/PROJECTS/subdiscover/pkg/resolver"
 )
 
 type Pool struct {

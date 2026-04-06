@@ -33,7 +33,7 @@ Advanced subdomain and asset discovery engine written in Go.
 ## Installation
 
 ```bash
-git clone https://github.com/AKID-S-GLOBAL-INTL-LTD/subdiscover
+git clone https://github.com/abrahamakinwale/PROJECTS/subdiscover
 cd subdiscover
 go mod tidy
 go build -o subdiscover ./cmd/subdiscover

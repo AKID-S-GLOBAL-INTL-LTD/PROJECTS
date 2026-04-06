@@ -16,6 +16,7 @@ import (
 type Result struct {
 	Subdomain string
 	IPs       []string
+	IPv6s     []string
 	CNAMEs    []string
 	IsCDN     bool
 	Error     error
@@ -80,52 +81,54 @@ func NewResolver(timeout time.Duration, retries int) *Resolver {
 
 // Resolve resolves a subdomain: A records + CNAME chain + CDN detection
 func (r *Resolver) Resolve(ctx context.Context, subdomain string) *Result {
-	if cached, ok := r.cache.Load(subdomain); ok {
-		return cached.(*Result)
-	}
+    if cached, ok := r.cache.Load(subdomain); ok {
+        return cached.(*Result)
+    }
 
-	result := &Result{Subdomain: subdomain}
+    result := &Result{Subdomain: subdomain}
 
-	// A records with retry across servers
-	for attempt := 0; attempt < r.retries; attempt++ {
-		for _, server := range r.servers {
-			select {
-			case <-ctx.Done():
-				result.Error = ctx.Err()
-				return result
-			default:
-			}
-			ips, err := r.queryA(subdomain, server)
-			if err == nil && len(ips) > 0 {
-				result.IPs = ips
-				goto resolved
-			}
-		}
-		time.Sleep(time.Duration(attempt) * 50 * time.Millisecond)
-	}
+    // Resolve A + AAAA records
+    for attempt := 0; attempt < r.retries; attempt++ {
+        for _, server := range r.servers {
+            select {
+            case <-ctx.Done():
+                result.Error = ctx.Err()
+                return result
+            default:
+            }
+
+            ipv4s, ipv6s, err := r.queryIPs(subdomain, server)
+            if err == nil && (len(ipv4s) > 0 || len(ipv6s) > 0) {
+                result.IPs = ipv4s
+                result.IPv6s = ipv6s
+                goto resolved
+            }
+        }
+        time.Sleep(time.Duration(attempt) * 50 * time.Millisecond)
+    }
 
 resolved:
-	if len(result.IPs) == 0 {
-		result.Error = fmt.Errorf("no resolution")
-		return result
-	}
+    if len(result.IPs) == 0 && len(result.IPv6s) == 0 {
+        result.Error = fmt.Errorf("no resolution")
+        return result
+    }
 
-	// CNAME chain
-	result.CNAMEs, _ = r.queryCNAME(subdomain, r.servers[0])
+    // CNAME chain
+    result.CNAMEs, _ = r.queryCNAME(subdomain, r.servers[0])
 
-	// CDN detection via CNAME
-	for _, c := range result.CNAMEs {
-		lower := strings.ToLower(c)
-		for _, pat := range cdnPatterns {
-			if strings.Contains(lower, pat) {
-				result.IsCDN = true
-				break
-			}
-		}
-	}
+    // CDN detection
+    for _, c := range result.CNAMEs {
+        lower := strings.ToLower(c)
+        for _, pat := range cdnPatterns {
+            if strings.Contains(lower, pat) {
+                result.IsCDN = true
+                break
+            }
+        }
+    }
 
-	r.cache.Store(subdomain, result)
-	return result
+    r.cache.Store(subdomain, result)
+    return result
 }
 
 // GetAssets fetches MX, NS, TXT, SOA records for the root domain
@@ -187,8 +190,8 @@ func (r *Resolver) GetAssets(domain string) *AssetResult {
 // IsWildcard detects wildcard DNS for a domain
 func (r *Resolver) IsWildcard(domain string) bool {
 	probe := fmt.Sprintf("subdiscover-probe-%d.%s", time.Now().UnixNano(), domain)
-	ips, err := r.queryA(probe, r.servers[0])
-	return err == nil && len(ips) > 0
+	ipv4s, ipv6s, err := r.queryIPs(probe, r.servers[0])
+	return err == nil && (len(ipv4s) > 0 || len(ipv6s) > 0)
 }
 
 // ReverseLookup performs a PTR lookup
@@ -209,21 +212,32 @@ func newMsg(name string, qtype uint16) *dns.Msg {
 	return m
 }
 
-func (r *Resolver) queryA(name, server string) ([]string, error) {
-	resp, _, err := r.client.Exchange(newMsg(name, dns.TypeA), server)
-	if err != nil {
-		return nil, err
-	}
-	var ips []string
-	for _, ans := range resp.Answer {
-		switch v := ans.(type) {
-		case *dns.A:
-			ips = append(ips, v.A.String())
-		case *dns.AAAA:
-			ips = append(ips, v.AAAA.String())
-		}
-	}
-	return ips, nil
+func (r *Resolver) queryIPs(name, server string) ([]string, []string, error) {
+    resp, _, err := r.client.Exchange(newMsg(name, dns.TypeA), server)
+    if err != nil {
+        return nil, nil, err
+    }
+
+    var ipv4s []string
+    for _, ans := range resp.Answer {
+        if a, ok := ans.(*dns.A); ok {
+            ipv4s = append(ipv4s, a.A.String())
+        }
+    }
+
+    resp6, _, err := r.client.Exchange(newMsg(name, dns.TypeAAAA), server)
+    if err != nil {
+        return ipv4s, nil, nil // don't fail completely if AAAA fails
+    }
+
+    var ipv6s []string
+    for _, ans := range resp6.Answer {
+        if aaaa, ok := ans.(*dns.AAAA); ok {
+            ipv6s = append(ipv6s, aaaa.AAAA.String())
+        }
+    }
+
+    return ipv4s, ipv6s, nil
 }
 
 func (r *Resolver) queryCNAME(name, server string) ([]string, error) {
