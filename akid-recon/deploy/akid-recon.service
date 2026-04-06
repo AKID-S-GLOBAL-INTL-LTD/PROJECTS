@@ -1,0 +1,29 @@
+[Unit]
+Description=AKID's Recon Automation Tool
+Documentation=https://github.com/akid/recon-tool
+After=network.target
+
+[Service]
+Type=exec
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/akid-recon/backend
+Environment=PATH=/home/ubuntu/akid-recon/backend/venv/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=/home/ubuntu/akid-recon/backend/.env
+ExecStart=/home/ubuntu/akid-recon/backend/venv/bin/gunicorn \
+    --workers 4 \
+    --bind 127.0.0.1:5000 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile - \
+    app:app
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=akid-recon
+
+[Install]
+WantedBy=multi-user.target

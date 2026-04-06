@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AKID's Recon Automation Tool — Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060a0f;
+  --bg2: #0c1117;
+  --bg3: #111820;
+  --panel: #0d1520;
+  --border: #1a2940;
+  --border2: #1e3050;
+  --accent: #00d4ff;
+  --accent2: #00ff88;
+  --accent3: #ff4444;
+  --text: #c8d8e8;
+  --text2: #7090a8;
+  --text3: #4a6478;
+  --mono: 'Share Tech Mono', monospace;
+  --head: 'Rajdhani', sans-serif;
+  --body: 'Exo 2', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Glow orbs */
+body::after {
+  content: '';
+  position: fixed;
+  top: -20%;
+  left: -10%;
+  width: 60%;
+  height: 60%;
+  background: radial-gradient(ellipse, rgba(0,212,255,0.04) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 440px;
+  padding: 20px;
+}
+
+/* Logo */
+.logo-wrap {
+  text-align: center;
+  margin-bottom: 36px;
+  animation: fadeDown 0.6s ease both;
+}
+.logo-icon {
+  font-size: 40px;
+  margin-bottom: 8px;
+  display: block;
+}
+.logo-title {
+  font-family: var(--head);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-shadow: 0 0 20px rgba(0,212,255,0.4);
+}
+.logo-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  letter-spacing: 2px;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+/* Card */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 32px;
+  position: relative;
+  animation: fadeUp 0.7s ease 0.1s both;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--border);
+}
+.tab-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 10px 0;
+  font-family: var(--head);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text3);
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+}
+.tab-btn.active { color: var(--accent); }
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+
+/* Form */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.form-group { margin-bottom: 18px; }
+.form-label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 7px;
+}
+.form-input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(0,212,255,0.1);
+}
+.form-input::placeholder { color: var(--text3); }
+
+.btn-primary {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 12px;
+  font-family: var(--head);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary:hover {
+  background: rgba(0,212,255,0.1);
+  box-shadow: 0 0 20px rgba(0,212,255,0.2);
+}
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary.loading { opacity: 0.6; pointer-events: none; }
+
+.error-msg {
+  background: rgba(255,68,68,0.1);
+  border: 1px solid rgba(255,68,68,0.3);
+  color: #ff6666;
+  padding: 10px 14px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 12px;
+  margin-bottom: 16px;
+  display: none;
+}
+.error-msg.show { display: block; }
+
+.success-msg {
+  background: rgba(0,255,136,0.08);
+  border: 1px solid rgba(0,255,136,0.3);
+  color: var(--accent2);
+  padding: 10px 14px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 12px;
+  margin-bottom: 16px;
+  display: none;
+}
+.success-msg.show { display: block; }
+
+/* Footer */
+footer {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  text-align: center;
+  padding: 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  border-top: 1px solid rgba(26,41,64,0.5);
+  z-index: 1;
+}
+footer span { color: var(--accent); }
+
+@keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Scanning lines animation */
+.scan-line {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.3), transparent);
+  animation: scanDown 4s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes scanDown {
+  from { top: 0%; }
+  to { top: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="scan-line"></div>
+<div class="container">
+  <div class="logo-wrap">
+    <span class="logo-icon">🛡️</span>
+    <div class="logo-title">AKID Recon</div>
+    <div class="logo-sub">Reconnaissance Automation Tool</div>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('login')">Login</button>
+      <button class="tab-btn" onclick="switchTab('register')">Register</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="tab-panel active" id="tab-login">
+      <div class="error-msg" id="login-error"></div>
+      <div class="success-msg" id="login-success"></div>
+      <div class="form-group">
+        <label class="form-label">Username or Email</label>
+        <input class="form-input" type="text" id="login-user" placeholder="enter username or email" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn-primary" id="login-btn" onclick="doLogin()">[ Login ]</button>
+    </div>
+
+    <!-- REGISTER -->
+    <div class="tab-panel" id="tab-register">
+      <div class="error-msg" id="reg-error"></div>
+      <div class="success-msg" id="reg-success"></div>
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input class="form-input" type="text" id="reg-user" placeholder="choose a username">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" id="reg-email" placeholder="your@email.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="reg-pass" placeholder="min. 6 characters">
+      </div>
+      <button class="btn-primary" id="reg-btn" onclick="doRegister()">[ Create Account ]</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>Akids Global CyberSecurity Tools</span> &nbsp;|&nbsp; &copy; 2026 All Rights Reserved
+</footer>
+
+<script>
+const API = '';
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', (i === 0 && tab==='login') || (i === 1 && tab==='register')));
+  document.getElementById('tab-login').classList.toggle('active', tab==='login');
+  document.getElementById('tab-register').classList.toggle('active', tab==='register');
+}
+
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = '[ ERROR ] ' + msg;
+  el.classList.add('show');
+}
+function hideMsg(id) { document.getElementById(id)?.classList.remove('show'); }
+function showOk(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = '[ OK ] ' + msg;
+  el.classList.add('show');
+}
+
+async function doLogin() {
+  hideMsg('login-error'); hideMsg('login-success');
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  if (!user || !pass) return showErr('login-error', 'All fields required');
+  const btn = document.getElementById('login-btn');
+  btn.classList.add('loading'); btn.textContent = '[ Authenticating... ]';
+  try {
+    const res = await fetch(API + '/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: user, password: pass})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+    localStorage.setItem('akid_token', data.token);
+    localStorage.setItem('akid_user', JSON.stringify(data.user));
+    showOk('login-success', 'Access granted. Redirecting...');
+    setTimeout(() => window.location.href = '/dashboard.html', 800);
+  } catch(e) {
+    showErr('login-error', e.message);
+    btn.classList.remove('loading'); btn.textContent = '[ Login ]';
+  }
+}
+
+async function doRegister() {
+  hideMsg('reg-error'); hideMsg('reg-success');
+  const user = document.getElementById('reg-user').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  if (!user || !email || !pass) return showErr('reg-error', 'All fields required');
+  const btn = document.getElementById('reg-btn');
+  btn.classList.add('loading'); btn.textContent = '[ Creating... ]';
+  try {
+    const res = await fetch(API + '/api/auth/register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username: user, email, password: pass})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Registration failed');
+    localStorage.setItem('akid_token', data.token);
+    localStorage.setItem('akid_user', JSON.stringify(data.user));
+    showOk('reg-success', 'Account created. Redirecting...');
+    setTimeout(() => window.location.href = '/dashboard.html', 800);
+  } catch(e) {
+    showErr('reg-error', e.message);
+    btn.classList.remove('loading'); btn.textContent = '[ Create Account ]';
+  }
+}
+
+// If already logged in, redirect
+if (localStorage.getItem('akid_token')) window.location.href = '/dashboard.html';
+
+// Enter key support
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('tab-login').classList.contains('active')) doLogin();
+    else doRegister();
+  }
+});
+</script>
+</body>
+</html>

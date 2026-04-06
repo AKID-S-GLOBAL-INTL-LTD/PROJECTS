@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AKID's Recon Tool — Scan History</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060a0f; --bg2: #0c1117; --bg3: #0f1a24;
+  --panel: #0d1520; --panel2: #0a1019;
+  --border: #1a2940; --border2: #1e3050;
+  --accent: #00d4ff; --accent2: #00ff88; --accent3: #ff4444; --accent4: #ffaa00;
+  --text: #c8d8e8; --text2: #7090a8; --text3: #4a6478;
+  --mono: 'Share Tech Mono', monospace;
+  --head: 'Rajdhani', sans-serif;
+  --body: 'Exo 2', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.navbar {
+  background: var(--panel2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  height: 58px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.nav-brand-text {
+  font-family: var(--head);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--accent);
+  text-transform: uppercase;
+  text-shadow: 0 0 16px rgba(0,212,255,0.4);
+}
+.nav-spacer { flex: 1; }
+.nav-links { display: flex; align-items: center; gap: 6px; }
+.nav-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 6px 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+.nav-btn.danger:hover { border-color: var(--accent3); color: var(--accent3); }
+.nav-user {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent2);
+  padding: 6px 12px;
+  border: 1px solid rgba(0,255,136,0.2);
+  border-radius: 3px;
+}
+
+.main { flex: 1; padding: 30px 24px; max-width: 1100px; margin: 0 auto; width: 100%; position: relative; z-index: 1; }
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+.page-title {
+  font-family: var(--head);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.page-title span { color: var(--accent); }
+.page-actions { display: flex; gap: 10px; }
+.btn-danger {
+  background: none;
+  border: 1px solid rgba(255,68,68,0.4);
+  color: var(--accent3);
+  padding: 8px 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-danger:hover { background: rgba(255,68,68,0.1); }
+
+/* Stats */
+.history-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 14px 20px;
+  text-align: center;
+}
+.stat-num { font-family: var(--mono); font-size: 28px; color: var(--accent); line-height: 1; }
+.stat-label { font-family: var(--mono); font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+
+/* Search filter */
+.history-filter {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+.filter-input {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 9px 14px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.filter-input:focus { border-color: var(--accent); }
+.filter-input::placeholder { color: var(--text3); }
+
+/* History table */
+.history-table {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.table-head {
+  display: grid;
+  grid-template-columns: 50px 1fr 220px 100px;
+  background: var(--panel2);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 20px;
+}
+.table-head-cell {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.history-row {
+  display: grid;
+  grid-template-columns: 50px 1fr 220px 100px;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(26,41,64,0.5);
+  align-items: center;
+  transition: background 0.15s;
+  animation: fadeIn 0.3s ease both;
+}
+.history-row:hover { background: var(--bg3); }
+.history-row:last-child { border-bottom: none; }
+
+.row-idx { font-family: var(--mono); font-size: 12px; color: var(--text3); }
+.row-domain {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+}
+.row-domain:hover { text-shadow: 0 0 10px rgba(0,212,255,0.5); }
+.row-date { font-family: var(--mono); font-size: 12px; color: var(--text3); }
+.row-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.btn-sm {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text3);
+  padding: 4px 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-sm.recon:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm.del:hover { border-color: var(--accent3); color: var(--accent3); }
+
+/* Empty */
+.empty-history {
+  text-align: center;
+  padding: 60px 20px;
+}
+.empty-icon { font-size: 48px; opacity: 0.2; margin-bottom: 16px; }
+.empty-title {
+  font-family: var(--head);
+  font-size: 20px;
+  letter-spacing: 2px;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.empty-sub { font-family: var(--mono); font-size: 13px; color: var(--text3); }
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+.page-btn {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 6px 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.page-btn:hover, .page-btn.active { border-color: var(--accent); color: var(--accent); }
+.page-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* Loading */
+.loading { text-align: center; padding: 50px; font-family: var(--mono); font-size: 13px; color: var(--text3); }
+.loader { display: inline-block; width: 30px; height: 30px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 60px; right: 24px;
+  background: var(--panel); border: 1px solid var(--accent2); color: var(--accent2);
+  padding: 10px 18px; font-family: var(--mono); font-size: 12px; border-radius: 3px;
+  z-index: 999; opacity: 0; transform: translateY(10px); transition: all 0.2s; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+footer {
+  background: var(--panel2); border-top: 1px solid var(--border);
+  text-align: center; padding: 16px; font-family: var(--mono); font-size: 11px; color: var(--text3);
+  position: relative; z-index: 1;
+}
+footer span { color: var(--accent); }
+
+@media (max-width: 600px) {
+  .table-head, .history-row { grid-template-columns: 40px 1fr 80px; }
+  .table-head-cell:nth-child(3), .row-date { display: none; }
+}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="/dashboard.html" class="nav-brand">
+    <span style="font-size:22px">🛡️</span>
+    <div class="nav-brand-text">AKID Recon</div>
+  </a>
+  <div class="nav-spacer"></div>
+  <div class="nav-links">
+    <a href="/dashboard.html" class="nav-btn">⬅ Dashboard</a>
+    <span class="nav-user" id="nav-username">guest</span>
+    <button class="nav-btn danger" onclick="logout()">⏏ Logout</button>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <div class="page-title">Scan <span>History</span></div>
+    <div class="page-actions">
+      <button class="btn-danger" onclick="clearAll()">🗑 Clear All</button>
+    </div>
+  </div>
+
+  <div class="history-stats" id="history-stats">
+    <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-label">Total Scans</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-unique">—</div><div class="stat-label">Unique Domains</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-latest">—</div><div class="stat-label">Latest Scan</div></div>
+  </div>
+
+  <div class="history-filter">
+    <input class="filter-input" type="text" id="search-filter" placeholder="filter by domain..." oninput="filterRows()">
+  </div>
+
+  <div class="history-table" id="history-table">
+    <div class="loading"><div class="loader"></div><br>Loading history...</div>
+  </div>
+
+  <div class="pagination" id="pagination"></div>
+</main>
+
+<footer>
+  <span>Akids Global CyberSecurity Tools</span> &nbsp;|&nbsp; &copy; 2026 All Rights Reserved
+</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+const token = localStorage.getItem('akid_token');
+const user = JSON.parse(localStorage.getItem('akid_user') || 'null');
+if (!token) window.location.href = '/index.html';
+if (user) document.getElementById('nav-username').textContent = '● ' + user.username;
+
+function logout() {
+  localStorage.removeItem('akid_token');
+  localStorage.removeItem('akid_user');
+  window.location.href = '/index.html';
+}
+
+let allScans = [];
+let currentPage = 1;
+const perPage = 20;
+
+function showToast(msg, color) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = color || 'var(--accent2)';
+  t.style.color = color || 'var(--accent2)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+async function loadHistory() {
+  try {
+    const res = await fetch('/api/history/?per_page=500', {
+      headers: {'Authorization': 'Bearer ' + token}
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    allScans = data.scans;
+    updateStats();
+    renderTable();
+  } catch(e) {
+    document.getElementById('history-table').innerHTML = `<div class="loading" style="color:var(--accent3)">Error: ${e.message}</div>`;
+  }
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent = allScans.length;
+  const unique = new Set(allScans.map(s => s.domain)).size;
+  document.getElementById('stat-unique').textContent = unique;
+  if (allScans.length > 0) {
+    const d = new Date(allScans[0].scanned_at);
+    document.getElementById('stat-latest').textContent = d.toLocaleDateString('en-GB', {day:'2-digit',month:'short'});
+  } else {
+    document.getElementById('stat-latest').textContent = '—';
+  }
+}
+
+function filterRows() {
+  currentPage = 1;
+  renderTable();
+}
+
+function getFiltered() {
+  const q = document.getElementById('search-filter').value.toLowerCase();
+  return q ? allScans.filter(s => s.domain.toLowerCase().includes(q)) : allScans;
+}
+
+function renderTable() {
+  const filtered = getFiltered();
+  const table = document.getElementById('history-table');
+  const total = filtered.length;
+
+  if (total === 0) {
+    table.innerHTML = `
+      <div class="empty-history">
+        <div class="empty-icon">📋</div>
+        <div class="empty-title">No history yet</div>
+        <div class="empty-sub">Run a scan from the dashboard to see it here</div>
+      </div>`;
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  const start = (currentPage - 1) * perPage;
+  const page = filtered.slice(start, start + perPage);
+  const totalPages = Math.ceil(total / perPage);
+
+  let html = `
+    <div class="table-head">
+      <div class="table-head-cell">#</div>
+      <div class="table-head-cell">Domain</div>
+      <div class="table-head-cell">Scanned At</div>
+      <div class="table-head-cell">Actions</div>
+    </div>
+  `;
+  page.forEach((scan, i) => {
+    const date = new Date(scan.scanned_at);
+    const dateStr = date.toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+    html += `
+      <div class="history-row" id="row-${scan.id}" style="animation-delay:${i*0.04}s">
+        <div class="row-idx">${start + i + 1}</div>
+        <div class="row-domain" onclick="reconDomain('${scan.domain}')" title="Click to recon again">${scan.domain}</div>
+        <div class="row-date">${dateStr}</div>
+        <div class="row-actions">
+          <button class="btn-sm recon" onclick="reconDomain('${scan.domain}')">⟳ Recon</button>
+          <button class="btn-sm del" onclick="deleteScan(${scan.id})">✕</button>
+        </div>
+      </div>
+    `;
+  });
+  table.innerHTML = html;
+
+  // Pagination
+  const pg = document.getElementById('pagination');
+  if (totalPages <= 1) { pg.innerHTML = ''; return; }
+  let pgHtml = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+  for (let p = 1; p <= totalPages; p++) {
+    if (p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1) {
+      pgHtml += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+    } else if (Math.abs(p - currentPage) === 2) {
+      pgHtml += `<span style="font-family:var(--mono);color:var(--text3);padding:0 4px">…</span>`;
+    }
+  }
+  pgHtml += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>›</button>`;
+  pg.innerHTML = pgHtml;
+}
+
+function goPage(p) {
+  currentPage = p;
+  renderTable();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function reconDomain(domain) {
+  localStorage.setItem('akid_recon_domain', domain);
+  window.location.href = '/dashboard.html';
+}
+
+async function deleteScan(id) {
+  try {
+    const res = await fetch(`/api/history/${id}`, {
+      method: 'DELETE',
+      headers: {'Authorization': 'Bearer ' + token}
+    });
+    if (!res.ok) throw new Error('Delete failed');
+    allScans = allScans.filter(s => s.id !== id);
+    updateStats();
+    renderTable();
+    showToast('✓ Scan deleted');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'var(--accent3)');
+  }
+}
+
+async function clearAll() {
+  if (!confirm('Clear ALL scan history? This cannot be undone.')) return;
+  try {
+    const res = await fetch('/api/history/clear', {
+      method: 'DELETE',
+      headers: {'Authorization': 'Bearer ' + token}
+    });
+    if (!res.ok) throw new Error('Failed');
+    allScans = [];
+    updateStats();
+    renderTable();
+    showToast('✓ History cleared');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'var(--accent3)');
+  }
+}
+
+// Handle auto-recon from history page click
+window.addEventListener('load', () => {
+  loadHistory();
+});
+</script>
+</body>
+</html>
