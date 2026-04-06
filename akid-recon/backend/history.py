@@ -7,9 +7,9 @@ history_bp = Blueprint('history', __name__)
 @history_bp.route('/', methods=['GET'])
 @jwt_required()
 def get_history():
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
+    per_page = request.args.get('per_page', 500, type=int)
     scans = ScanHistory.query.filter_by(user_id=user_id)\
         .order_by(ScanHistory.scanned_at.desc())\
         .paginate(page=page, per_page=per_page, error_out=False)
@@ -23,7 +23,7 @@ def get_history():
 @history_bp.route('/<int:scan_id>', methods=['DELETE'])
 @jwt_required()
 def delete_scan(scan_id):
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     scan = ScanHistory.query.filter_by(id=scan_id, user_id=user_id).first()
     if not scan:
         return jsonify({'error': 'Scan not found'}), 404
@@ -34,7 +34,7 @@ def delete_scan(scan_id):
 @history_bp.route('/clear', methods=['DELETE'])
 @jwt_required()
 def clear_history():
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     ScanHistory.query.filter_by(user_id=user_id).delete()
     db.session.commit()
     return jsonify({'message': 'History cleared'})

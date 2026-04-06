@@ -38,7 +38,7 @@ def generate():
         verify_jwt_in_request(optional=True)
         identity = get_jwt_identity()
         if identity:
-            user_id = identity
+            user_id = int(identity)
             scan = ScanHistory(user_id=user_id, domain=domain)
             db.session.add(scan)
             db.session.commit()
