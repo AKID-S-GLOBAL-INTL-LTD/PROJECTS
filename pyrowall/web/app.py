@@ -10,7 +10,7 @@ def create_app():
     app = Flask(__name__, template_folder='templates', static_folder='static')
     app.config['SECRET_KEY'] = 'akid-firewall-dev-secret'
 
-    socketio.init_app(app, cors_allowed_origins='*', async_mode='threading')
+    socketio.init_app(app, cors_allowed_origins='*')
 
     # Register blueprints
     from web.routes.dashboard import bp as dashboard_bp
