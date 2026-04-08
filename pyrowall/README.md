@@ -38,7 +38,7 @@ real-time, enforces configurable rules, and exposes a full control panel at `htt
 ### 1. Clone / download the project
 
 ```bash
-git clone https://github.com/yourname/akid-firewall.git
+git clone https://github.com/AKID-S-GLOBAL-INTL-LTD/PROJECTS
 cd akid-firewall
 ```
 
