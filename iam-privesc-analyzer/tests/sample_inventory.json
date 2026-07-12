@@ -1,0 +1,103 @@
+{
+  "account": {"account": "123456789012", "arn": "arn:aws:iam::123456789012:user/analyst", "user_id": "AID123"},
+  "users": [
+    {
+      "name": "dev-intern",
+      "arn": "arn:aws:iam::123456789012:user/dev-intern",
+      "groups": ["developers"],
+      "inline_policies": {
+        "self-escalate": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {"Effect": "Allow", "Action": ["iam:CreatePolicyVersion", "iam:PassRole"], "Resource": "*"}
+          ]
+        }
+      },
+      "attached_policies": {}
+    },
+    {
+      "name": "ci-deploy-user",
+      "arn": "arn:aws:iam::123456789012:user/ci-deploy-user",
+      "groups": [],
+      "inline_policies": {
+        "deploy-perms": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {"Effect": "Allow", "Action": ["iam:PassRole", "lambda:CreateFunction", "lambda:InvokeFunction"], "Resource": "*"}
+          ]
+        }
+      },
+      "attached_policies": {}
+    },
+    {
+      "name": "readonly-analyst",
+      "arn": "arn:aws:iam::123456789012:user/readonly-analyst",
+      "groups": ["auditors"],
+      "inline_policies": {},
+      "attached_policies": {}
+    },
+    {
+      "name": "root-admin",
+      "arn": "arn:aws:iam::123456789012:user/root-admin",
+      "groups": [],
+      "inline_policies": {},
+      "attached_policies": {
+        "AdministratorAccess": {
+          "Version": "2012-10-17",
+          "Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]
+        }
+      }
+    }
+  ],
+  "groups": [
+    {
+      "name": "developers",
+      "arn": "arn:aws:iam::123456789012:group/developers",
+      "inline_policies": {},
+      "attached_policies": {}
+    },
+    {
+      "name": "auditors",
+      "arn": "arn:aws:iam::123456789012:group/auditors",
+      "inline_policies": {
+        "read-only": {
+          "Version": "2012-10-17",
+          "Statement": [{"Effect": "Allow", "Action": ["s3:GetObject", "ec2:Describe*"], "Resource": "*"}]
+        }
+      },
+      "attached_policies": {}
+    }
+  ],
+  "roles": [
+    {
+      "name": "lambda-admin-role",
+      "arn": "arn:aws:iam::123456789012:role/lambda-admin-role",
+      "trust_policy": {
+        "Version": "2012-10-17",
+        "Statement": [{"Effect": "Allow", "Principal": {"Service": "lambda.amazonaws.com"}, "Action": "sts:AssumeRole"}]
+      },
+      "inline_policies": {},
+      "attached_policies": {
+        "AdministratorAccess": {
+          "Version": "2012-10-17",
+          "Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]
+        }
+      }
+    },
+    {
+      "name": "cross-account-role",
+      "arn": "arn:aws:iam::123456789012:role/cross-account-role",
+      "trust_policy": {
+        "Version": "2012-10-17",
+        "Statement": [{"Effect": "Allow", "Principal": {"AWS": "arn:aws:iam::123456789012:user/ci-deploy-user"}, "Action": "sts:AssumeRole"}]
+      },
+      "inline_policies": {
+        "s3-read": {
+          "Version": "2012-10-17",
+          "Statement": [{"Effect": "Allow", "Action": ["s3:GetObject"], "Resource": "*"}]
+        }
+      },
+      "attached_policies": {}
+    }
+  ]
+}

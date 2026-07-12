@@ -1,0 +1,18 @@
+Copyright (c) 2026 AKID's Global Cybersecurity Tools. All rights reserved.
+
+IAM Privilege Escalation Path Analyzer
+
+This software is provided for authorized defensive security assessment
+purposes only. It performs read-only analysis of AWS Identity and Access
+Management (IAM) configurations to identify privilege escalation risks
+for remediation.
+
+Permission is granted to use, copy, and modify this software for
+internal security assessment purposes within organizations that own or
+have explicit written authorization to assess the target AWS account(s).
+Use of this tool against AWS accounts without proper authorization is
+strictly prohibited and may violate applicable law.
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED. AKID'S GLOBAL CYBERSECURITY TOOLS SHALL NOT BE LIABLE FOR
+ANY DAMAGES ARISING FROM THE USE OF THIS SOFTWARE.
